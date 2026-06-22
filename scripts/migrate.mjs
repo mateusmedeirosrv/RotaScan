@@ -1,5 +1,5 @@
 import postgres from "postgres";
-import { readFileSync } from "fs";
+import { readdirSync, readFileSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 
@@ -11,15 +11,19 @@ if (!databaseUrl) {
   process.exit(1);
 }
 
+const migrationsDir = join(__dir, "../supabase/migrations");
+const files = readdirSync(migrationsDir)
+  .filter((f) => f.endsWith(".sql"))
+  .sort();
+
 const sql = postgres(databaseUrl, { ssl: "require", max: 1 });
 
 try {
-  const migration = readFileSync(
-    join(__dir, "../supabase/migrations/001_initial_schema.sql"),
-    "utf-8"
-  );
-  console.log("Aplicando migration 001_initial_schema.sql...");
-  await sql.unsafe(migration);
+  for (const file of files) {
+    console.log(`Aplicando migration ${file}...`);
+    const migration = readFileSync(join(migrationsDir, file), "utf-8");
+    await sql.unsafe(migration);
+  }
   console.log("✓ Schema aplicado com sucesso.");
 } catch (err) {
   console.error("Erro ao aplicar migration:", err.message);
