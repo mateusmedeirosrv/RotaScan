@@ -269,7 +269,7 @@ CREATE POLICY "leitura_admin_senha_override" ON configuracoes FOR SELECT
 
 CREATE OR REPLACE FUNCTION verificar_senha_override(senha_tentativa TEXT)
 RETURNS BOOLEAN LANGUAGE sql SECURITY DEFINER STABLE
-SET search_path = public, pg_temp AS $$
+SET search_path = public, extensions, pg_temp AS $$
   SELECT valor = crypt(senha_tentativa, valor)
   FROM configuracoes
   WHERE chave = 'senha_override'
