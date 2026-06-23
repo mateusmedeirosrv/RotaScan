@@ -12,7 +12,7 @@ import {
 import { RotaFormDialog } from "./rota-form";
 
 export default async function RotasPage() {
-  const supabase = await requireAdminOrGerente();
+  const { supabase } = await requireAdminOrGerente();
 
   const [{ data: rotas }, { data: galpoes }, { data: rotaBairros }] =
     await Promise.all([

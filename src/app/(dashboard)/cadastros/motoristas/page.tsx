@@ -11,7 +11,7 @@ import {
 import { MotoristaFormDialog } from "./motorista-form";
 
 export default async function MotoristasPage() {
-  const supabase = await requireAdminOrGerente();
+  const { supabase } = await requireAdminOrGerente();
 
   const [{ data: motoristas }, { data: galpoes }] = await Promise.all([
     supabase.from("motoristas").select("*").order("nome"),

@@ -7,7 +7,7 @@ type RotaCriarInput = { galpao_id: string; nome: string };
 type RotaAtualizarInput = { galpao_id: string; nome: string; ativa: boolean };
 
 export async function criarRota(input: RotaCriarInput) {
-  const supabase = await requireAdminOrGerente();
+  const { supabase } = await requireAdminOrGerente();
   const { data, error } = await supabase
     .from("rotas")
     .insert({ ...input, ativa: true })
@@ -21,7 +21,7 @@ export async function criarRota(input: RotaCriarInput) {
 }
 
 export async function atualizarRota(id: string, input: RotaAtualizarInput) {
-  const supabase = await requireAdminOrGerente();
+  const { supabase } = await requireAdminOrGerente();
   const { error } = await supabase.from("rotas").update(input).eq("id", id);
 
   if (error) return { error: "Não foi possível salvar a rota." };
@@ -32,7 +32,7 @@ export async function atualizarRota(id: string, input: RotaAtualizarInput) {
 }
 
 export async function adicionarBairroNaRota(rotaId: string, bairroId: string) {
-  const supabase = await requireAdminOrGerente();
+  const { supabase } = await requireAdminOrGerente();
 
   const { data: ultimo } = await supabase
     .from("rota_bairros")
@@ -55,7 +55,7 @@ export async function adicionarBairroNaRota(rotaId: string, bairroId: string) {
 }
 
 export async function removerBairroDaRota(rotaId: string, bairroId: string) {
-  const supabase = await requireAdminOrGerente();
+  const { supabase } = await requireAdminOrGerente();
   const { error } = await supabase
     .from("rota_bairros")
     .delete()
@@ -73,7 +73,7 @@ export async function moverBairro(
   bairroId: string,
   direcao: "cima" | "baixo"
 ) {
-  const supabase = await requireAdminOrGerente();
+  const { supabase } = await requireAdminOrGerente();
 
   const { data: itens } = await supabase
     .from("rota_bairros")

@@ -9,6 +9,8 @@ import type { Database } from "@/lib/types/database.types";
 
 type Papel = Database["public"]["Tables"]["colaboradores"]["Row"]["papel"];
 
+const LINKS_TODOS = [{ href: "/operacoes", label: "Operações" }];
+
 const LINKS_ADMIN = [
   { href: "/cadastros/cidades", label: "Cidades" },
   { href: "/cadastros/bairros", label: "Bairros" },
@@ -20,6 +22,7 @@ const LINKS_ADMIN = [
 const LINKS_ADMIN_OU_GERENTE = [
   { href: "/cadastros/motoristas", label: "Motoristas" },
   { href: "/cadastros/rotas", label: "Rotas" },
+  { href: "/operacoes/ativas", label: "Operações ativas" },
 ];
 
 export function DashboardNav({
@@ -32,6 +35,7 @@ export function DashboardNav({
   const pathname = usePathname();
 
   const links = [
+    ...LINKS_TODOS,
     ...(papel === "admin" ? LINKS_ADMIN : []),
     ...(papel === "admin" || papel === "gerente" ? LINKS_ADMIN_OU_GERENTE : []),
   ];

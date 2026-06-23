@@ -11,7 +11,7 @@ export default async function RotaDetalhePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const supabase = await requireAdminOrGerente();
+  const { supabase } = await requireAdminOrGerente();
 
   const { data: rota } = await supabase
     .from("rotas")

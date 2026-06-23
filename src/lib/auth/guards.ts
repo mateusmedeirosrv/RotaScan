@@ -38,5 +38,24 @@ export async function requireAdminOrGerente() {
     redirect("/");
   }
 
-  return supabase;
+  return { supabase, papel: colaborador.papel };
+}
+
+export async function requireAuth() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) redirect("/login");
+
+  const { data: colaborador } = await supabase
+    .from("colaboradores")
+    .select("id, galpao_id, papel")
+    .eq("user_id", user.id)
+    .single();
+
+  if (!colaborador) redirect("/login");
+
+  return { supabase, colaborador };
 }

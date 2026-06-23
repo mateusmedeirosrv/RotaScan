@@ -13,7 +13,7 @@ type MotoristaInput = {
 };
 
 export async function criarMotorista(input: MotoristaInput) {
-  const supabase = await requireAdminOrGerente();
+  const { supabase } = await requireAdminOrGerente();
   const { error } = await supabase.from("motoristas").insert({
     ...input,
     ativo: true,
@@ -29,7 +29,7 @@ export async function atualizarMotorista(
   id: string,
   input: MotoristaInput & { ativo: boolean }
 ) {
-  const supabase = await requireAdminOrGerente();
+  const { supabase } = await requireAdminOrGerente();
   const { error } = await supabase
     .from("motoristas")
     .update(input)

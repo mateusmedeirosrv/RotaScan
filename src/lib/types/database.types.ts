@@ -133,7 +133,7 @@ export interface Database {
           finalizada_em: string | null;
         };
         Insert: Omit<Database["public"]["Tables"]["operacoes"]["Row"], "id" | "status" | "iniciada_em">;
-        Update: Partial<Database["public"]["Tables"]["operacoes"]["Insert"]>;
+        Update: Partial<Omit<Database["public"]["Tables"]["operacoes"]["Row"], "id" | "iniciada_em">>;
         Relationships: [];
       };
       bipagens: {
@@ -152,6 +152,29 @@ export interface Database {
         };
         Insert: Omit<Database["public"]["Tables"]["bipagens"]["Row"], "id" | "bipado_em" | "override_aplicado">;
         Update: Partial<Database["public"]["Tables"]["bipagens"]["Insert"]>;
+        Relationships: [];
+      };
+      manifestos: {
+        Row: {
+          id: string;
+          operacao_id: string;
+          nome_arquivo: string;
+          total_itens: number;
+          importado_em: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["manifestos"]["Row"], "id" | "importado_em">;
+        Update: Partial<Database["public"]["Tables"]["manifestos"]["Insert"]>;
+        Relationships: [];
+      };
+      manifesto_itens: {
+        Row: {
+          id: string;
+          manifesto_id: string;
+          codigo: string;
+          descricao: string | null;
+        };
+        Insert: Omit<Database["public"]["Tables"]["manifesto_itens"]["Row"], "id">;
+        Update: Partial<Database["public"]["Tables"]["manifesto_itens"]["Insert"]>;
         Relationships: [];
       };
       configuracoes: {
