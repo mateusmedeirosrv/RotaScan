@@ -48,28 +48,36 @@ export default async function OperacaoDetalhePage({
     rotas: { id: string; nome: string }[];
     motoristas: { id: string; nome: string }[];
     bloqueioConfig: "BLOQUEAR" | "PERMITIR_COM_ALERTA" | "PERMITIR";
+    sons: { confirmado: string; duplicado: string; erro: string };
   } | null = null;
 
   if (!finalizada) {
-    const [{ data: rotas }, { data: motoristas }, { data: config }] = await Promise.all([
-      supabase
-        .from("rotas")
-        .select("id, nome")
-        .eq("galpao_id", operacao.galpao_id)
-        .eq("ativa", true)
-        .order("nome"),
-      supabase
-        .from("motoristas")
-        .select("id, nome")
-        .eq("galpao_id", operacao.galpao_id)
-        .eq("ativo", true)
-        .order("nome"),
-      supabase
-        .from("configuracoes")
-        .select("valor")
-        .eq("chave", "bipagem_entrega_sem_recebimento")
-        .maybeSingle(),
-    ]);
+    const [{ data: rotas }, { data: motoristas }, { data: config }, { data: sonsConfig }] =
+      await Promise.all([
+        supabase
+          .from("rotas")
+          .select("id, nome")
+          .eq("galpao_id", operacao.galpao_id)
+          .eq("ativa", true)
+          .order("nome"),
+        supabase
+          .from("motoristas")
+          .select("id, nome")
+          .eq("galpao_id", operacao.galpao_id)
+          .eq("ativo", true)
+          .order("nome"),
+        supabase
+          .from("configuracoes")
+          .select("valor")
+          .eq("chave", "bipagem_entrega_sem_recebimento")
+          .maybeSingle(),
+        supabase
+          .from("configuracoes")
+          .select("chave, valor")
+          .in("chave", ["som_confirmado_arquivo", "som_duplicado_arquivo", "som_erro_arquivo"]),
+      ]);
+
+    const valoresSons = Object.fromEntries((sonsConfig ?? []).map((c) => [c.chave, c.valor]));
 
     dadosBipagem = {
       rotas: rotas ?? [],
@@ -77,6 +85,11 @@ export default async function OperacaoDetalhePage({
       bloqueioConfig:
         (config?.valor as "BLOQUEAR" | "PERMITIR_COM_ALERTA" | "PERMITIR" | undefined) ??
         "PERMITIR",
+      sons: {
+        confirmado: valoresSons.som_confirmado_arquivo ?? "/sounds/confirmado.wav",
+        duplicado: valoresSons.som_duplicado_arquivo ?? "/sounds/duplicado.wav",
+        erro: valoresSons.som_erro_arquivo ?? "/sounds/erro.wav",
+      },
     };
   }
 
@@ -153,6 +166,7 @@ export default async function OperacaoDetalhePage({
           rotas={dadosBipagem.rotas}
           motoristas={dadosBipagem.motoristas}
           bloqueioConfig={dadosBipagem.bloqueioConfig}
+          sons={dadosBipagem.sons}
         />
       )}
 

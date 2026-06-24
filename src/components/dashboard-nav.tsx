@@ -22,6 +22,8 @@ const LINKS_ADMIN = [
   { href: "/cadastros/galpoes", label: "Galpões" },
   { href: "/cadastros/transportadoras", label: "Transportadoras" },
   { href: "/cadastros/colaboradores", label: "Colaboradores" },
+  { href: "/cadastros/configuracoes", label: "Configurações" },
+  { href: "/auditoria", label: "Auditoria" },
 ];
 
 const LINKS_ADMIN_OU_GERENTE = [

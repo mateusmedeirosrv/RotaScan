@@ -256,6 +256,10 @@ export interface Database {
         Args: { p_bipagem_id: string };
         Returns: undefined;
       };
+      alterar_senha_override: {
+        Args: { p_nova_senha: string };
+        Returns: undefined;
+      };
       dashboard_kpis: {
         Args: {
           p_data_inicio: string;

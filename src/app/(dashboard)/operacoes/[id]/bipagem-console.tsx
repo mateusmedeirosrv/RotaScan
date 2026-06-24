@@ -49,12 +49,6 @@ type EventoBipagem = {
   bipadoEm: string;
 };
 
-const SONS = {
-  confirmado: "/sounds/confirmado.wav",
-  duplicado: "/sounds/duplicado.wav",
-  erro: "/sounds/erro.wav",
-};
-
 const FLASH_CLASSE: Record<"confirmado" | "duplicado" | "erro", string> = {
   confirmado: "bg-green-500/25",
   duplicado: "bg-yellow-500/25",
@@ -80,6 +74,7 @@ export function BipagemConsole({
   rotas,
   motoristas,
   bloqueioConfig,
+  sons,
 }: {
   operacaoId: string;
   colaboradorId: string;
@@ -89,6 +84,7 @@ export function BipagemConsole({
   rotas: Rota[];
   motoristas: Motorista[];
   bloqueioConfig: BloqueioConfig;
+  sons: { confirmado: string; duplicado: string; erro: string };
 }) {
   const supabase = useMemo(() => createClient(), []);
   const queryClient = useQueryClient();
@@ -280,7 +276,7 @@ export function BipagemConsole({
   }, [overlayRotaAberto, overlayIndice, rotas]);
 
   function dispararFeedback(status: "confirmado" | "duplicado" | "erro") {
-    tocarSom(SONS[status]);
+    tocarSom(sons[status]);
     setFlash(status);
     setTimeout(() => setFlash(null), 250);
   }

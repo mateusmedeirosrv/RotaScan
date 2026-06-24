@@ -8,11 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
 const MM = 2.834645669;
-const LABEL_W = 21.0 * MM;
-const LABEL_H = 38.2 * MM;
-const COLUNAS = 10;
-const LINHAS = 7;
-const POR_PAGINA = COLUNAS * LINHAS;
 
 function base64ParaBytes(dataUrl: string) {
   const base64 = dataUrl.split(",")[1];
@@ -22,10 +17,15 @@ function base64ParaBytes(dataUrl: string) {
   return bytes;
 }
 
-async function gerarPdf(codigos: string[]) {
+async function gerarPdf(codigos: string[], larguraMm: number, alturaMm: number) {
   const [pageWidth, pageHeight] = PageSizes.A4;
-  const margemX = (pageWidth - COLUNAS * LABEL_W) / 2;
-  const margemY = (pageHeight - LINHAS * LABEL_H) / 2;
+  const labelW = larguraMm * MM;
+  const labelH = alturaMm * MM;
+  const colunas = Math.max(1, Math.floor(pageWidth / labelW));
+  const linhas = Math.max(1, Math.floor(pageHeight / labelH));
+  const porPagina = colunas * linhas;
+  const margemX = (pageWidth - colunas * labelW) / 2;
+  const margemY = (pageHeight - linhas * labelH) / 2;
 
   const doc = await PDFDocument.create();
   const fonte = await doc.embedFont(StandardFonts.Helvetica);
@@ -33,36 +33,42 @@ async function gerarPdf(codigos: string[]) {
   let page = doc.addPage([pageWidth, pageHeight]);
 
   for (let i = 0; i < codigos.length; i++) {
-    const idxNaPagina = i % POR_PAGINA;
+    const idxNaPagina = i % porPagina;
     if (i > 0 && idxNaPagina === 0) {
       page = doc.addPage([pageWidth, pageHeight]);
     }
 
     const codigo = codigos[i];
-    const col = idxNaPagina % COLUNAS;
-    const linha = Math.floor(idxNaPagina / COLUNAS);
+    const col = idxNaPagina % colunas;
+    const linha = Math.floor(idxNaPagina / colunas);
 
-    const celulaX = margemX + col * LABEL_W;
-    const celulaYTopo = pageHeight - margemY - linha * LABEL_H;
+    const celulaX = margemX + col * labelW;
+    const celulaYTopo = pageHeight - margemY - linha * labelH;
 
     const dataUrl = await QRCode.toDataURL(codigo, { margin: 1, width: 200 });
     const png = await doc.embedPng(base64ParaBytes(dataUrl));
 
-    const qrTamanho = LABEL_W - 8;
-    const qrX = celulaX + (LABEL_W - qrTamanho) / 2;
+    const qrTamanho = labelW - 8;
+    const qrX = celulaX + (labelW - qrTamanho) / 2;
     const qrY = celulaYTopo - 6 - qrTamanho;
     page.drawImage(png, { x: qrX, y: qrY, width: qrTamanho, height: qrTamanho });
 
     const tamanhoFonte = 7;
     const larguraTexto = fonte.widthOfTextAtSize(codigo, tamanhoFonte);
-    const textoX = celulaX + (LABEL_W - larguraTexto) / 2;
+    const textoX = celulaX + (labelW - larguraTexto) / 2;
     page.drawText(codigo, { x: textoX, y: qrY - 10, size: tamanhoFonte, font: fonte });
   }
 
-  return doc.save();
+  return { bytes: await doc.save(), porPagina };
 }
 
-export function QrCodeGenerator() {
+export function QrCodeGenerator({
+  larguraMm,
+  alturaMm,
+}: {
+  larguraMm: number;
+  alturaMm: number;
+}) {
   const [texto, setTexto] = useState("");
   const [gerando, setGerando] = useState(false);
 
@@ -75,10 +81,17 @@ export function QrCodeGenerator() {
     [texto]
   );
 
+  const porPaginaEstimado = useMemo(() => {
+    const [pageWidth, pageHeight] = PageSizes.A4;
+    const colunas = Math.max(1, Math.floor(pageWidth / (larguraMm * MM)));
+    const linhas = Math.max(1, Math.floor(pageHeight / (alturaMm * MM)));
+    return colunas * linhas;
+  }, [larguraMm, alturaMm]);
+
   async function handleGerar() {
     setGerando(true);
     try {
-      const bytes = await gerarPdf(codigos);
+      const { bytes } = await gerarPdf(codigos, larguraMm, alturaMm);
       const blob = new Blob([bytes as unknown as BlobPart], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -103,7 +116,7 @@ export function QrCodeGenerator() {
       />
       <p className="text-sm text-muted-foreground">
         {codigos.length} código(s) detectado(s)
-        {codigos.length > 0 && ` · ${Math.ceil(codigos.length / POR_PAGINA)} folha(s) A4`}
+        {codigos.length > 0 && ` · ${Math.ceil(codigos.length / porPaginaEstimado)} folha(s) A4`}
       </p>
       <Button type="button" disabled={!codigos.length || gerando} onClick={handleGerar}>
         {gerando ? "Gerando..." : "Gerar PDF"}
