@@ -2,6 +2,7 @@ import { requireAdminOrGerente } from "@/lib/auth/guards";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DashboardFiltros } from "./filtros";
 import { DashboardCharts } from "./charts";
+import { ExportarExcelButton } from "./exportar-excel-button";
 import type { TipoEvento } from "@/lib/types/database.types";
 
 function hoje() {
@@ -96,7 +97,20 @@ export default async function DashboardPage({
 
   return (
     <main className="space-y-6 p-6">
-      <h1 className="text-xl font-semibold">Dashboard</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold">Dashboard</h1>
+        <ExportarExcelButton
+          dataInicio={dataInicio}
+          dataFim={dataFim}
+          galpaoId={galpaoId}
+          transportadoraId={transportadoraId}
+          tipoEvento={tipoEvento}
+          operacaoId={operacaoId}
+          rotaId={rotaId}
+          colaboradorId={colaboradorId}
+          motoristaId={motoristaId}
+        />
+      </div>
 
       <DashboardFiltros
         dataInicio={dataInicio}

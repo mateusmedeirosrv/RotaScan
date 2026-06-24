@@ -11,7 +11,10 @@ import type { Database } from "@/lib/types/database.types";
 
 type Papel = Database["public"]["Tables"]["colaboradores"]["Row"]["papel"];
 
-const LINKS_TODOS = [{ href: "/operacoes", label: "Operações" }];
+const LINKS_TODOS = [
+  { href: "/operacoes", label: "Operações" },
+  { href: "/ferramentas/qrcode", label: "Etiquetas QR" },
+];
 
 const LINKS_ADMIN = [
   { href: "/cadastros/cidades", label: "Cidades" },

@@ -17,6 +17,24 @@ export type TipoEvento =
 
 export type StatusOperacao = "EM_ANDAMENTO" | "FINALIZADA";
 
+export interface LinhaExport {
+  tipo_encomenda: string;
+  tipo_evento: string;
+  operacao: string;
+  rota: string;
+  colaborador: string;
+  data_hora: string;
+  motorista: string | null;
+  codigo: string;
+  status: "OK" | "Override aplicado";
+}
+
+export interface DashboardBipagensExport {
+  total: number;
+  truncado: boolean;
+  linhas: LinhaExport[];
+}
+
 export interface DashboardKpis {
   total: number;
   por_dia: { dia: string; total: number }[];
@@ -251,6 +269,20 @@ export interface Database {
           p_motorista_id?: string | null;
         };
         Returns: DashboardKpis;
+      };
+      dashboard_bipagens_export: {
+        Args: {
+          p_data_inicio: string;
+          p_data_fim: string;
+          p_galpao_id?: string | null;
+          p_transportadora_id?: string | null;
+          p_tipo_evento?: TipoEvento | null;
+          p_operacao_id?: string | null;
+          p_rota_id?: string | null;
+          p_colaborador_id?: string | null;
+          p_motorista_id?: string | null;
+        };
+        Returns: DashboardBipagensExport;
       };
     };
     Enums: {
