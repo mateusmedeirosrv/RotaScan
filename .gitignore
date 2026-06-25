@@ -44,3 +44,6 @@ next-env.d.ts
 
 # serwist (service worker gerado em build)
 public/sw*
+
+.vercel
+.env*
