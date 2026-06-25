@@ -7,6 +7,7 @@ import type { Database } from "@/lib/types/database.types";
 type TipoEvento = Database["public"]["Tables"]["operacoes"]["Row"]["tipo_evento"];
 
 type OperacaoInput = {
+  galpao_id: string;
   transportadora_id: string;
   data: string;
   tipo_evento: TipoEvento;
@@ -19,7 +20,6 @@ export async function criarOperacao(input: OperacaoInput) {
     .from("operacoes")
     .insert({
       ...input,
-      galpao_id: colaborador.galpao_id,
       colaborador_id: colaborador.id,
       finalizada_em: null,
     })

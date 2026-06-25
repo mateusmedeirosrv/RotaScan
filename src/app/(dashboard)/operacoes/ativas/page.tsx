@@ -39,6 +39,19 @@ export default async function OperacoesAtivasPage() {
     (colaboradores ?? []).map((c) => [c.id, c])
   );
 
+  const operacaoIds = (operacoes ?? []).map((o) => o.id);
+  const { data: bipagens } = operacaoIds.length
+    ? await supabase.from("bipagens").select("operacao_id").in("operacao_id", operacaoIds)
+    : { data: [] as { operacao_id: string }[] };
+
+  const quantidadePorOperacao = new Map<string, number>();
+  for (const bipagem of bipagens ?? []) {
+    quantidadePorOperacao.set(
+      bipagem.operacao_id,
+      (quantidadePorOperacao.get(bipagem.operacao_id) ?? 0) + 1
+    );
+  }
+
   return (
     <main className="space-y-4 p-6">
       <h1 className="text-xl font-semibold">Operações ativas</h1>
@@ -51,6 +64,7 @@ export default async function OperacoesAtivasPage() {
             <TableHead>Tipo</TableHead>
             <TableHead>Data</TableHead>
             <TableHead>Iniciada em</TableHead>
+            <TableHead>Quantidade</TableHead>
             <TableHead className="w-48" />
           </TableRow>
         </TableHeader>
@@ -70,6 +84,9 @@ export default async function OperacoesAtivasPage() {
                 <TableCell>
                   {new Date(operacao.iniciada_em).toLocaleString("pt-BR")}
                 </TableCell>
+                <TableCell>
+                  {quantidadePorOperacao.get(operacao.id) ?? 0}
+                </TableCell>
                 <TableCell className="flex items-center justify-end gap-2">
                   <Button
                     variant="ghost"
@@ -88,7 +105,7 @@ export default async function OperacoesAtivasPage() {
           ) : (
             <TableRow>
               <TableCell
-                colSpan={6}
+                colSpan={7}
                 className="text-center text-muted-foreground"
               >
                 Nenhuma operação em andamento.

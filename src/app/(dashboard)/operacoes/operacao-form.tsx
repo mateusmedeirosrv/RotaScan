@@ -28,6 +28,7 @@ import { criarOperacao } from "./actions";
 import type { Database } from "@/lib/types/database.types";
 
 type Transportadora = Database["public"]["Tables"]["transportadoras"]["Row"];
+type Galpao = Database["public"]["Tables"]["galpoes"]["Row"];
 type TipoEvento = Database["public"]["Tables"]["operacoes"]["Row"]["tipo_evento"];
 
 const TIPOS_EVENTO: { value: TipoEvento; label: string }[] = [
@@ -42,6 +43,7 @@ function hoje() {
 }
 
 const schema = z.object({
+  galpao_id: z.string().min(1, "Selecione o galpão"),
   transportadora_id: z.string().min(1, "Selecione a transportadora"),
   data: z.string().min(1, "Informe a data"),
   tipo_evento: z.enum(["RECEBIMENTO", "ENTREGA", "DEVOLUCAO_ORIGEM", "RETORNO"]),
@@ -51,15 +53,20 @@ type FormData = z.infer<typeof schema>;
 
 export function OperacaoFormDialog({
   transportadoras,
+  galpoes,
+  galpaoIdPadrao,
   trigger,
 }: {
   transportadoras: Transportadora[];
+  galpoes: Galpao[];
+  galpaoIdPadrao: string;
   trigger: React.ReactElement;
 }) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
 
   const defaultValues = {
+    galpao_id: galpaoIdPadrao,
     transportadora_id: "",
     data: hoje(),
     tipo_evento: "RECEBIMENTO" as TipoEvento,
@@ -104,6 +111,38 @@ export function OperacaoFormDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="space-y-1">
+            <Label htmlFor="galpao_id">Galpão</Label>
+            <Controller
+              name="galpao_id"
+              control={control}
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger id="galpao_id" className="w-full">
+                    <SelectValue placeholder="Selecione o galpão">
+                      {(value: string) =>
+                        galpoes.find((g) => g.id === value)?.nome ??
+                        "Selecione o galpão"
+                      }
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {galpoes.map((galpao) => (
+                      <SelectItem key={galpao.id} value={galpao.id}>
+                        {galpao.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            {errors.galpao_id && (
+              <p className="text-sm text-destructive">
+                {errors.galpao_id.message}
+              </p>
+            )}
+          </div>
+
           <div className="space-y-1">
             <Label htmlFor="transportadora_id">Transportadora</Label>
             <Controller

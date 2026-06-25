@@ -21,16 +21,32 @@ const TIPO_EVENTO_LABEL: Record<string, string> = {
 export default async function OperacoesPage() {
   const { supabase, colaborador } = await requireAuth();
 
-  const [{ data: transportadoras }, { data: operacoes }] = await Promise.all([
-    supabase.from("transportadoras").select("*").order("nome"),
-    supabase
-      .from("operacoes")
-      .select("*")
-      .eq("colaborador_id", colaborador.id)
-      .order("iniciada_em", { ascending: false }),
-  ]);
+  const [{ data: transportadoras }, { data: galpoes }, { data: operacoes }] =
+    await Promise.all([
+      supabase.from("transportadoras").select("*").order("nome"),
+      supabase.from("galpoes").select("*").order("nome"),
+      supabase
+        .from("operacoes")
+        .select("*")
+        .eq("colaborador_id", colaborador.id)
+        .order("iniciada_em", { ascending: false }),
+    ]);
 
   const transportadorasAtivas = (transportadoras ?? []).filter((t) => t.ativo);
+  const galpoesAtivos = (galpoes ?? []).filter((g) => g.ativo);
+
+  const operacaoIds = (operacoes ?? []).map((o) => o.id);
+  const { data: bipagens } = operacaoIds.length
+    ? await supabase.from("bipagens").select("operacao_id").in("operacao_id", operacaoIds)
+    : { data: [] as { operacao_id: string }[] };
+
+  const quantidadePorOperacao = new Map<string, number>();
+  for (const bipagem of bipagens ?? []) {
+    quantidadePorOperacao.set(
+      bipagem.operacao_id,
+      (quantidadePorOperacao.get(bipagem.operacao_id) ?? 0) + 1
+    );
+  }
 
   return (
     <main className="space-y-4 p-6">
@@ -38,8 +54,14 @@ export default async function OperacoesPage() {
         <h1 className="text-xl font-semibold">Operações</h1>
         <OperacaoFormDialog
           transportadoras={transportadorasAtivas}
+          galpoes={galpoesAtivos}
+          galpaoIdPadrao={colaborador.galpao_id}
           trigger={
-            <Button disabled={!transportadorasAtivas.length}>Nova operação</Button>
+            <Button
+              disabled={!transportadorasAtivas.length || !galpoesAtivos.length}
+            >
+              Nova operação
+            </Button>
           }
         />
       </div>
@@ -50,6 +72,12 @@ export default async function OperacoesPage() {
         </p>
       )}
 
+      {!galpoesAtivos.length && (
+        <p className="text-sm text-muted-foreground">
+          Nenhum galpão ativo disponível.
+        </p>
+      )}
+
       <Table>
         <TableHeader>
           <TableRow>
@@ -57,6 +85,7 @@ export default async function OperacoesPage() {
             <TableHead>Tipo</TableHead>
             <TableHead>Data</TableHead>
             <TableHead>Status</TableHead>
+            <TableHead>Quantidade</TableHead>
             <TableHead className="w-20" />
           </TableRow>
         </TableHeader>
@@ -77,6 +106,9 @@ export default async function OperacoesPage() {
                       : "Finalizada"}
                   </TableCell>
                   <TableCell>
+                    {quantidadePorOperacao.get(operacao.id) ?? 0}
+                  </TableCell>
+                  <TableCell>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -92,7 +124,7 @@ export default async function OperacoesPage() {
           ) : (
             <TableRow>
               <TableCell
-                colSpan={5}
+                colSpan={6}
                 className="text-center text-muted-foreground"
               >
                 Nenhuma operação ainda.
