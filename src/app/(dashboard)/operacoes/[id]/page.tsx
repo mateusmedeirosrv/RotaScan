@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { requireAuth } from "@/lib/auth/guards";
 import { ManifestoUpload } from "./manifesto-upload";
 import { FinalizarOperacaoButton } from "./finalizar-button";
+import { InativarOperacaoButton } from "./inativar-button";
 import { BipagemConsole } from "./bipagem-console";
 import { ConflitosSection } from "./conflitos-section";
 
@@ -120,9 +121,15 @@ export default async function OperacaoDetalhePage({
           <p className="text-sm text-muted-foreground">
             {operacao.data} ·{" "}
             {finalizada ? "Finalizada" : "Em andamento"}
+            {!operacao.ativa && " · Inativa"}
           </p>
         </div>
-        {!finalizada && <FinalizarOperacaoButton operacaoId={operacao.id} />}
+        <div className="flex items-center gap-2">
+          {colaborador.papel === "admin" && (
+            <InativarOperacaoButton operacaoId={operacao.id} ativa={operacao.ativa} />
+          )}
+          {!finalizada && <FinalizarOperacaoButton operacaoId={operacao.id} />}
+        </div>
       </div>
 
       {ehRecebimento && (

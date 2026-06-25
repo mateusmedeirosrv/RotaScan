@@ -79,7 +79,10 @@ export default async function OperacoesAtivasPage() {
                   {transportadorasPorId.get(operacao.transportadora_id)?.nome ??
                     "—"}
                 </TableCell>
-                <TableCell>{TIPO_EVENTO_LABEL[operacao.tipo_evento]}</TableCell>
+                <TableCell>
+                  {TIPO_EVENTO_LABEL[operacao.tipo_evento]}
+                  {!operacao.ativa && " · Inativa"}
+                </TableCell>
                 <TableCell>{operacao.data}</TableCell>
                 <TableCell>
                   {new Date(operacao.iniciada_em).toLocaleString("pt-BR")}

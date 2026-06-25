@@ -166,8 +166,12 @@ export interface Database {
           status: StatusOperacao;
           iniciada_em: string;
           finalizada_em: string | null;
+          ativa: boolean;
         };
-        Insert: Omit<Database["public"]["Tables"]["operacoes"]["Row"], "id" | "status" | "iniciada_em">;
+        Insert: Omit<
+          Database["public"]["Tables"]["operacoes"]["Row"],
+          "id" | "status" | "iniciada_em" | "ativa"
+        > & { ativa?: boolean };
         Update: Partial<Omit<Database["public"]["Tables"]["operacoes"]["Row"], "id" | "iniciada_em">>;
         Relationships: [];
       };

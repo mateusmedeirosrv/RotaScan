@@ -104,6 +104,7 @@ export default async function OperacoesPage() {
                     {operacao.status === "EM_ANDAMENTO"
                       ? "Em andamento"
                       : "Finalizada"}
+                    {!operacao.ativa && " · Inativa"}
                   </TableCell>
                   <TableCell>
                     {quantidadePorOperacao.get(operacao.id) ?? 0}

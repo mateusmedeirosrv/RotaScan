@@ -1,7 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAuth } from "@/lib/auth/guards";
+import { requireAdmin, requireAuth } from "@/lib/auth/guards";
+import { registrarAuditoria } from "@/lib/auditoria";
 import type { createClient } from "@/lib/supabase/server";
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
@@ -204,6 +205,50 @@ export async function finalizarOperacao(operacaoId: string) {
     .eq("id", operacaoId);
 
   if (error) return { error: "Não foi possível finalizar a operação." };
+
+  revalidatePath(`/operacoes/${operacaoId}`);
+  revalidatePath("/operacoes");
+  revalidatePath("/operacoes/ativas");
+  return { error: null };
+}
+
+export async function inativarOperacao(operacaoId: string) {
+  const supabase = await requireAdmin();
+
+  const { error } = await supabase
+    .from("operacoes")
+    .update({ ativa: false })
+    .eq("id", operacaoId);
+
+  if (error) return { error: "Não foi possível inativar a operação." };
+
+  await registrarAuditoria(supabase, {
+    tipo: "operacao_inativada",
+    descricao: "Operação inativada (ex.: treinamento) e removida dos indicadores do Dashboard.",
+    dados: { operacao_id: operacaoId },
+  });
+
+  revalidatePath(`/operacoes/${operacaoId}`);
+  revalidatePath("/operacoes");
+  revalidatePath("/operacoes/ativas");
+  return { error: null };
+}
+
+export async function reativarOperacao(operacaoId: string) {
+  const supabase = await requireAdmin();
+
+  const { error } = await supabase
+    .from("operacoes")
+    .update({ ativa: true })
+    .eq("id", operacaoId);
+
+  if (error) return { error: "Não foi possível reativar a operação." };
+
+  await registrarAuditoria(supabase, {
+    tipo: "operacao_reativada",
+    descricao: "Operação reativada e volta a contar nos indicadores do Dashboard.",
+    dados: { operacao_id: operacaoId },
+  });
 
   revalidatePath(`/operacoes/${operacaoId}`);
   revalidatePath("/operacoes");
