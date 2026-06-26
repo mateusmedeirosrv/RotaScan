@@ -378,7 +378,8 @@ export function BipagemConsole({
     const codigo = codigoBruto.trim();
     if (!codigo) return;
 
-    if (regexValidacao && !new RegExp(regexValidacao).test(codigo)) {
+    const regexEfetivo = regexValidacao ?? "^[Tt][Bb][Rr]\\d{9}$";
+    if (!new RegExp(regexEfetivo, "i").test(codigo)) {
       adicionarEventoSessao(codigo, "erro");
       return;
     }
@@ -420,18 +421,23 @@ export function BipagemConsole({
 
   function handleCodigoChange(novoValor: string) {
     setCodigoInput(novoValor);
-    if (!regexValidacao) return;
+    if (!novoValor) return;
 
-    if (new RegExp(regexValidacao).test(novoValor)) {
+    // Usa o regex configurado ou cai no padrão TBR (case-insensitive)
+    const regexEfetivo = regexValidacao ?? "^[Tt][Bb][Rr]\\d{9}$";
+
+    if (new RegExp(regexEfetivo, "i").test(novoValor)) {
       setCodigoInput("");
       void processarCodigo(novoValor);
       return;
     }
 
-    const prefixo = prefixoLiteral(regexValidacao);
-    const maximo = comprimentoMaximo(regexValidacao, prefixo);
+    const prefixo = prefixoLiteral(regexEfetivo);
+    const maximo = comprimentoMaximo(regexEfetivo, prefixo);
+    // Comparação case-insensitive para o prefixo (ex.: "tbr" == "TBR")
     const formatoJaInvalido =
-      !prefixoAindaValido(prefixo, novoValor) || (maximo !== null && novoValor.length > maximo);
+      !prefixoAindaValido(prefixo.toUpperCase(), novoValor.toUpperCase()) ||
+      (maximo !== null && novoValor.length > maximo);
 
     if (formatoJaInvalido) {
       setCodigoInput("");
