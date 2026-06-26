@@ -40,6 +40,7 @@ type EventoBipagem = {
   codigo: string;
   status: "confirmado" | "duplicado" | "erro" | "pendente";
   bipadoEm: string;
+  motivo?: string | null;
 };
 
 const FLASH_CLASSE: Record<"confirmado" | "duplicado" | "erro", string> = {
@@ -224,6 +225,7 @@ export function BipagemConsole({
           codigo: linha.codigo,
           status: "confirmado",
           bipadoEm: linha.bipado_em,
+          motivo: linha.motivo,
         })
       );
     },
@@ -265,6 +267,7 @@ export function BipagemConsole({
       codigo: item.payload.codigo,
       status: "pendente",
       bipadoEm: item.payload.bipado_em,
+      motivo: item.payload.motivo,
     }));
     return [...pendentesComoEvento, ...(ultimos ?? [])]
       .sort((a, b) => (a.bipadoEm < b.bipadoEm ? 1 : -1))
@@ -389,6 +392,7 @@ export function BipagemConsole({
               codigo: resultado.bipagem.codigo,
               status: "confirmado" as const,
               bipadoEm: resultado.bipagem.bipado_em,
+              motivo: resultado.bipagem.motivo,
             },
             ...(old ?? []),
           ].slice(0, 10)
@@ -686,18 +690,23 @@ export function BipagemConsole({
 
       <ul className="divide-y text-sm">
         {ultimosCombinados.map((evento) => (
-          <li key={evento.id} className="flex items-center justify-between py-1.5">
-            <span>{evento.codigo}</span>
-            <span
-              className={cn(
-                "text-xs",
-                evento.status === "confirmado" && "text-green-600",
-                evento.status === "pendente" && "text-blue-600",
-                evento.status === "duplicado" && "text-yellow-600",
-                evento.status === "erro" && "text-red-600"
+          <li key={evento.id} className="flex items-center justify-between gap-4 py-1.5">
+            <span className="font-mono">{evento.codigo}</span>
+            <span className="flex min-w-0 flex-1 items-center justify-end gap-3">
+              {evento.motivo && (
+                <span className="truncate text-xs text-muted-foreground">{evento.motivo}</span>
               )}
-            >
-              {evento.status === "pendente" ? "pendente de sincronização" : evento.status}
+              <span
+                className={cn(
+                  "shrink-0 text-xs",
+                  evento.status === "confirmado" && "text-green-600",
+                  evento.status === "pendente" && "text-blue-600",
+                  evento.status === "duplicado" && "text-yellow-600",
+                  evento.status === "erro" && "text-red-600"
+                )}
+              >
+                {evento.status === "pendente" ? "pendente de sincronização" : evento.status}
+              </span>
             </span>
           </li>
         ))}
