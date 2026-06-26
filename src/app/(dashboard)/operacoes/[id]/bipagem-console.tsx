@@ -624,15 +624,16 @@ export function BipagemConsole({
       )}
 
       <form onSubmit={handleSubmit}>
-        <Input
+        {/* input nativo obrigatório: Base UI (@base-ui/react/input) não expõe o DOM
+            nativo diretamente via ref/e.target, impedindo a limpeza síncrona do scanner */}
+        <input
           ref={inputRef}
           autoFocus
-          defaultValue=""
           onChange={handleCodigoChange}
           onKeyDown={handleKeyDown}
           placeholder="Bipe o código aqui"
-          className="h-14 text-lg"
           autoComplete="off"
+          className="h-14 w-full rounded-lg border border-input bg-transparent px-3 text-lg outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
         />
       </form>
 
