@@ -35,6 +35,11 @@ export default async function OperacoesPage() {
   const transportadorasAtivas = (transportadoras ?? []).filter((t) => t.ativo);
   const galpoesAtivos = (galpoes ?? []).filter((g) => g.ativo);
 
+  const GALPAO_PADRAO_ID = "0dd7d7dd-3ccc-4d4f-9dce-7e32024d6c97";
+  const galpaoIdPadrao = galpoesAtivos.some((g) => g.id === GALPAO_PADRAO_ID)
+    ? GALPAO_PADRAO_ID
+    : colaborador.galpao_id;
+
   const operacaoIds = (operacoes ?? []).map((o) => o.id);
   const { data: bipagens } = operacaoIds.length
     ? await supabase.from("bipagens").select("operacao_id").in("operacao_id", operacaoIds)
@@ -55,7 +60,7 @@ export default async function OperacoesPage() {
         <OperacaoFormDialog
           transportadoras={transportadorasAtivas}
           galpoes={galpoesAtivos}
-          galpaoIdPadrao={colaborador.galpao_id}
+          galpaoIdPadrao={galpaoIdPadrao}
           trigger={
             <Button
               disabled={!transportadorasAtivas.length || !galpoesAtivos.length}
