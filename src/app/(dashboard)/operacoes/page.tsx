@@ -86,6 +86,7 @@ export default async function OperacoesPage() {
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead>Galpão</TableHead>
             <TableHead>Transportadora</TableHead>
             <TableHead>Tipo</TableHead>
             <TableHead>Data</TableHead>
@@ -100,8 +101,10 @@ export default async function OperacoesPage() {
               const transportadora = transportadoras?.find(
                 (t) => t.id === operacao.transportadora_id
               );
+              const galpao = galpoes?.find((g) => g.id === operacao.galpao_id);
               return (
                 <TableRow key={operacao.id}>
+                  <TableCell>{galpao?.nome ?? "—"}</TableCell>
                   <TableCell>{transportadora?.nome ?? "—"}</TableCell>
                   <TableCell>{TIPO_EVENTO_LABEL[operacao.tipo_evento]}</TableCell>
                   <TableCell>{operacao.data}</TableCell>
@@ -130,7 +133,7 @@ export default async function OperacoesPage() {
           ) : (
             <TableRow>
               <TableCell
-                colSpan={6}
+                colSpan={7}
                 className="text-center text-muted-foreground"
               >
                 Nenhuma operação ainda.
