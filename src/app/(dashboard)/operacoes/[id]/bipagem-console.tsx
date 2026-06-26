@@ -462,44 +462,34 @@ export function BipagemConsole({
   }
 
   function handleCodigoChange(e: React.ChangeEvent<HTMLInputElement>) {
-    // Descarta tudo enquanto travado — absorve burst do scanner após erro
+    const up = e.target.value.toUpperCase();
+    e.target.value = up;
+
+    console.log("[bipagem] onChange →", JSON.stringify(up), "| travado:", travadoRef.current);
+
     if (travadoRef.current) {
       e.target.value = "";
       return;
     }
 
-    // Normaliza para maiúsculo diretamente no DOM (sem passar por estado React)
-    const up = e.target.value.toUpperCase();
-    e.target.value = up;
-
     if (!up) return;
 
-    if (regexValidacao) {
-      if (new RegExp(regexValidacao, "i").test(up)) {
-        limparInput();
-        void processarCodigo(up);
-        return;
-      }
-      const prefixo = prefixoLiteral(regexValidacao);
-      const maximo = comprimentoMaximo(regexValidacao, prefixo);
-      const invalido =
-        !prefixoAindaValido(prefixo.toUpperCase(), up) ||
-        (maximo !== null && up.length > maximo);
-      if (invalido) dispararErroFormato(up);
+    const prefixoAtual = up.slice(0, Math.min(3, up.length));
+    const prefixoEsperado = "TBR".slice(0, prefixoAtual.length);
+    const prefixoInvalido = prefixoAtual !== prefixoEsperado;
+
+    console.log("[bipagem] prefixo:", prefixoAtual, "esperado:", prefixoEsperado, "inválido:", prefixoInvalido);
+
+    if (prefixoInvalido || up.length > 12) {
+      console.log("[bipagem] → dispararErroFormato");
+      dispararErroFormato(up);
       return;
     }
 
-    // Sem regex: valida TBR diretamente (TBR + 9 dígitos = 12 chars)
     if (/^TBR\d{9}$/.test(up)) {
+      console.log("[bipagem] → código completo, processando");
       limparInput();
       void processarCodigo(up);
-      return;
-    }
-
-    const prefixoDigitado = up.slice(0, Math.min(3, up.length));
-    const prefixoEsperado = "TBR".slice(0, prefixoDigitado.length);
-    if (prefixoDigitado !== prefixoEsperado || up.length > 12) {
-      dispararErroFormato(up);
     }
   }
 
