@@ -465,8 +465,6 @@ export function BipagemConsole({
     const up = e.target.value.toUpperCase();
     e.target.value = up;
 
-    console.log("[bipagem] onChange →", JSON.stringify(up), "| travado:", travadoRef.current);
-
     if (travadoRef.current) {
       e.target.value = "";
       return;
@@ -474,20 +472,27 @@ export function BipagemConsole({
 
     if (!up) return;
 
+    // Prefixo deve ser TBR (char a char)
     const prefixoAtual = up.slice(0, Math.min(3, up.length));
-    const prefixoEsperado = "TBR".slice(0, prefixoAtual.length);
-    const prefixoInvalido = prefixoAtual !== prefixoEsperado;
-
-    console.log("[bipagem] prefixo:", prefixoAtual, "esperado:", prefixoEsperado, "inválido:", prefixoInvalido);
-
-    if (prefixoInvalido || up.length > 12) {
-      console.log("[bipagem] → dispararErroFormato");
+    if (prefixoAtual !== "TBR".slice(0, prefixoAtual.length)) {
       dispararErroFormato(up);
       return;
     }
 
+    // Após TBR, só dígitos são permitidos — rejeita qualquer caractere inválido imediatamente
+    if (up.length > 3 && !/^\d+$/.test(up.slice(3))) {
+      dispararErroFormato(up);
+      return;
+    }
+
+    // Tamanho máximo: TBR + 9 dígitos = 12
+    if (up.length > 12) {
+      dispararErroFormato(up);
+      return;
+    }
+
+    // Código completo e válido
     if (/^TBR\d{9}$/.test(up)) {
-      console.log("[bipagem] → código completo, processando");
       limparInput();
       void processarCodigo(up);
     }
