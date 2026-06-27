@@ -33,11 +33,19 @@ function formatarDia(dia: string) {
 }
 
 export function DashboardCharts({ dados }: { dados: DashboardKpis }) {
-  const porDia = dados.por_dia.map((d) => ({ ...d, diaLabel: formatarDia(d.dia) }));
-  const porTipoEvento = dados.por_tipo_evento.map((d) => ({
+  const porDia = (dados.por_dia ?? []).map((d) => ({ ...d, diaLabel: formatarDia(d.dia) }));
+  const porTipoEvento = (dados.por_tipo_evento ?? []).map((d) => ({
     ...d,
     label: TIPO_EVENTO_LABEL[d.tipo_evento] ?? d.tipo_evento,
   }));
+
+  if (porDia.length === 0 && porTipoEvento.length === 0) {
+    return (
+      <p className="py-8 text-center text-sm text-muted-foreground">
+        Nenhuma bipagem encontrada para o período e filtros selecionados.
+      </p>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

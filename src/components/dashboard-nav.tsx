@@ -68,20 +68,28 @@ export function DashboardNav({
 
         {links.length > 0 && (
           <div className="flex items-center gap-1 text-sm overflow-x-auto">
-            {links.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={cn(
-                  "whitespace-nowrap rounded px-3 py-1.5 text-white/55 transition-colors hover:text-white",
-                  pathname.startsWith(link.href)
-                    ? "bg-[--brand-orange] font-semibold text-[--brand-navy]"
-                    : "hover:bg-white/10"
-                )}
-              >
-                {link.label}
-              </Link>
-            ))}
+            {links.map((link) => {
+              const ativo = pathname.startsWith(link.href);
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  style={
+                    ativo
+                      ? { backgroundColor: "var(--brand-orange)", color: "var(--brand-navy)" }
+                      : undefined
+                  }
+                  className={cn(
+                    "whitespace-nowrap rounded px-3 py-1.5 transition-colors",
+                    ativo
+                      ? "font-semibold"
+                      : "text-white/55 hover:bg-white/10 hover:text-white"
+                  )}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
           </div>
         )}
 
