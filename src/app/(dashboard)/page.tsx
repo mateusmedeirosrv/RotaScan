@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { HomeEntregasChart } from "./home-entregas-chart";
 
 type QuickCard = { href: string; title: string; desc: string };
 
@@ -48,13 +49,12 @@ export default async function HomePage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { data: colaborador } = user
-    ? await supabase
-        .from("colaboradores")
-        .select("papel, nome")
-        .eq("user_id", user.id)
-        .single()
-    : { data: null };
+  const [{ data: colaborador }, { data: entregasRows }] = await Promise.all([
+    user
+      ? supabase.from("colaboradores").select("papel, nome").eq("user_id", user.id).single()
+      : Promise.resolve({ data: null }),
+    supabase.rpc("home_entregas_chart"),
+  ]);
 
   const papel = colaborador?.papel ?? null;
   const primeiroNome = (colaborador?.nome ?? user?.email ?? "").split(" ")[0];
@@ -88,6 +88,16 @@ export default async function HomePage() {
           {cards.map((card) => (
             <Card key={card.href} {...card} />
           ))}
+        </div>
+      </div>
+
+      {/* Gráfico de entregas */}
+      <div>
+        <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+          Entregas por transportadora — últimos 3 meses (períodos de 15 dias)
+        </p>
+        <div className="rounded-lg border bg-white p-4 shadow-sm">
+          <HomeEntregasChart rows={entregasRows ?? []} />
         </div>
       </div>
     </main>

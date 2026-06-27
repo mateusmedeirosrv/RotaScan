@@ -280,6 +280,10 @@ export interface Database {
         Args: { p_nova_senha: string };
         Returns: undefined;
       };
+      home_entregas_chart: {
+        Args: Record<string, never>;
+        Returns: Array<{ periodo: string; transportadora: string; total: number }>;
+      };
       dashboard_kpis: {
         Args: {
           p_data_inicio: string;
