@@ -74,8 +74,9 @@ export function DashboardNav({
                 href={link.href}
                 className={cn(
                   "whitespace-nowrap rounded px-3 py-1.5 text-white/55 transition-colors hover:text-white",
-                  pathname.startsWith(link.href) &&
-                    "font-semibold text-[--brand-orange]"
+                  pathname.startsWith(link.href)
+                    ? "bg-[--brand-orange] font-semibold text-[--brand-navy]"
+                    : "hover:bg-white/10"
                 )}
               >
                 {link.label}
