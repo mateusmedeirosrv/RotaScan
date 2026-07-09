@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+
+<meta charset="UTF-8">
+
+<title>PL Express SCAN AMAZON</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="data:,">
+
+<script src="libs/qrcode.min.js"></script>
+<script src="libs/jszip.min.js"></script>
+
+<style>
+
+.popup{
+position:fixed;
+inset:0;
+background:rgba(0,0,0,.7);
+display:none;
+justify-content:center;
+align-items:center;
+z-index:9999;
+}
+
+.popup-box{
+background:#111;
+padding:20px;
+border-radius:10px;
+width:90%;
+max-width:350px;
+color:white;
+}
+
+#listaDrivers div{
+padding:6px;
+border-bottom:1px solid #333;
+cursor:pointer;
+}
+
+#lista div,
+#listaProblema div{
+padding:8px;
+border-bottom:1px solid #333;
+cursor:pointer;
+}
+
+.item.ok{
+background:#14532d;
+}
+
+.item.erro{
+background:#7f1d1d;
+}
+
+.item.dup{
+background:#713f12;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<header>
+
+<img src="assets/logo.png" class="logo">
+
+<h1>PL Express SCAN AMAZON</h1>
+
+</header>
+
+
+<div id="setup">
+
+<input id="operador" placeholder="Nome do operador">
+
+<input id="driver" placeholder="Nome do driver">
+
+<button onclick="startScan()">Iniciar Bipagem</button>
+
+</div>
+
+
+<div id="scanner" style="display:none;">
+
+<h2>Operador: <span id="opName"></span></h2>
+
+<h3>Driver: <span id="driverName"></span></h3>
+
+<input id="codeInput" placeholder="Bipe o código TBR" autofocus>
+
+
+<div class="status">
+
+<div>Total: <span id="totalCount">0</span></div>
+
+<div class="ok">OK: <span id="okCount">0</span></div>
+
+<div class="erro">Erro: <span id="erroCount">0</span></div>
+
+<div class="dup">Dup: <span id="dupCount">0</span></div>
+
+</div>
+
+<!-- NOVOS BOTÕES UX -->
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+
+<button id="btnMais" type="button" style="background:#d3b087;color:black">⋮ Opções</button>  
+
+<div id="menuMais" style="display:none; margin-top:8px;">
+
+    <button onclick="copyEnxuto()">Copiar Enxuto</button>
+
+    <button onclick="copyCompleto()">Copiar Completo</button>
+
+    <button onclick="exportarExcel()">Exportar Excel</button>
+
+    <button onclick="gerarQRCodes()">Gerar QR Codes</button>
+
+    <button onclick="downloadZIP()">Download ZIP</button>
+
+</div>
+
+<button onclick="abrirTrocaDriver()" style="background:#36ffd3;color:black">Trocar Driver</button>
+
+<button onclick="excluirSelecionado()" style="background:#facc15;color:black">Excluir Selecionado</button>
+
+<button onclick="resetApp()" style="background:#ef4444;color:white">Resetar Bipagem</button>
+
+</div>
+
+
+
+
+<h3>Últimos Bipados</h3>
+
+<div id="lista"></div>
+
+<h3>Códigos com Problema</h3>
+
+<div id="listaProblema"></div>
+
+
+</div>
+
+
+<!-- POPUP DRIVER -->
+
+<div id="popupDriver" class="popup">
+
+<div class="popup-box">
+
+<h3>Trocar Driver</h3>
+
+<input id="novoDriver" placeholder="Nome do driver">
+
+<button onclick="confirmarTrocaDriver()">Confirmar</button>
+
+<h4>Drivers usados</h4>
+
+<div id="listaDrivers"></div>
+
+<button onclick="fecharPopup()">Fechar</button>
+
+</div>
+
+</div>
+
+
+<audio id="soundOk" src="sounds/ok.wav"></audio>
+
+<audio id="soundErro" src="sounds/erro.wav"></audio>
+
+<audio id="soundDup" src="sounds/dup.wav"></audio>
+
+</div>
+
+
+<script src="app.js"></script>
+
+</body>
+</html>
