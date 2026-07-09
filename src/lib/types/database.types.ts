@@ -35,12 +35,35 @@ export interface DashboardBipagensExport {
   linhas: LinhaExport[];
 }
 
+export interface RankingItem {
+  total: number;
+  dias_trabalhados: number;
+  media_dia: number;
+}
+
 export interface DashboardKpis {
   total: number;
   por_dia: { dia: string; total: number }[];
   por_transportadora: { transportadora: string; total: number }[];
-  por_motorista: { motorista: string; total: number }[];
+  por_motorista: ({ motorista: string } & RankingItem)[];
+  ranking_colaboradores: ({ colaborador: string } & RankingItem)[];
   por_tipo_evento: { tipo_evento: TipoEvento; total: number }[];
+  por_dia_transportadora: { dia: string; transportadora: string; total: number }[];
+  heatmap_galpao_tipo: { galpao: string; tipo_evento: TipoEvento; total: number }[];
+  por_rota_treemap: { galpao: string; rota: string; total: number; insucesso: number }[];
+  funil: {
+    recebido: number;
+    bipado: number;
+    em_rota: number;
+    entregue: number;
+  };
+  sankey_fluxo: {
+    recebido: number;
+    entregue: number;
+    devolvido: number;
+    retornado: number;
+    em_aberto: number;
+  };
   recebimento_total: number;
   entrega_total: number;
   overrides_aplicados: number;

@@ -86,7 +86,13 @@ export default async function DashboardPage({
     por_dia: [],
     por_transportadora: [],
     por_motorista: [],
+    ranking_colaboradores: [],
     por_tipo_evento: [],
+    por_dia_transportadora: [],
+    heatmap_galpao_tipo: [],
+    por_rota_treemap: [],
+    funil: { recebido: 0, bipado: 0, em_rota: 0, entregue: 0 },
+    sankey_fluxo: { recebido: 0, entregue: 0, devolvido: 0, retornado: 0, em_aberto: 0 },
     recebimento_total: 0,
     entrega_total: 0,
     overrides_aplicados: 0,
@@ -175,7 +181,7 @@ export default async function DashboardPage({
         </Card>
       </div>
 
-      <DashboardCharts dados={dados} />
+      <DashboardCharts dados={dados} diferencaAbs={diferencaAbs} diferencaPct={diferencaPct} />
     </main>
   );
 }
