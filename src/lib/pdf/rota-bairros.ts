@@ -1,10 +1,10 @@
 import { PDFDocument, PageSizes, StandardFonts } from "pdf-lib";
 
 const MM = 2.834645669;
-const MARGEM_ESQUERDA_MM = 28;
-const MARGEM_SUPERIOR_MM = 30;
-const MARGEM_DIREITA_MM = 15;
-const MARGEM_INFERIOR_MM = 15;
+const MARGEM_ESQUERDA_MM = 10;
+const MARGEM_SUPERIOR_MM = 10;
+const MARGEM_DIREITA_MM = 10;
+const MARGEM_INFERIOR_MM = 10;
 const FATOR_ESPACAMENTO = 1.7;
 const FONTE_MAX_PT = 56;
 const FONTE_MIN_PT = 8;
