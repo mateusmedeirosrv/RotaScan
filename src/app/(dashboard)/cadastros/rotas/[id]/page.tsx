@@ -4,6 +4,7 @@ import { requireAdminOrGerente } from "@/lib/auth/guards";
 import { Button } from "@/components/ui/button";
 import { RotaFormDialog } from "../rota-form";
 import { RotaBairrosEditor } from "./rota-bairros-editor";
+import { ExportarBairrosPdfButton } from "./exportar-bairros-pdf-button";
 
 export default async function RotaDetalhePage({
   params,
@@ -72,11 +73,17 @@ export default async function RotaDetalhePage({
             {galpao.nome} · {rota.ativa ? "Ativa" : "Inativa"}
           </p>
         </div>
-        <RotaFormDialog
-          rota={rota}
-          galpoes={galpoes ?? []}
-          trigger={<Button variant="outline">Editar dados</Button>}
-        />
+        <div className="flex items-center gap-2">
+          <ExportarBairrosPdfButton
+            nomeRota={rota.nome}
+            bairros={bairrosOrdenados.map((b) => b.nome)}
+          />
+          <RotaFormDialog
+            rota={rota}
+            galpoes={galpoes ?? []}
+            trigger={<Button variant="outline">Editar dados</Button>}
+          />
+        </div>
       </div>
 
       <div className="space-y-2">
