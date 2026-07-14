@@ -34,6 +34,17 @@ export async function atualizarRota(id: string, input: RotaAtualizarInput) {
 export async function adicionarBairroNaRota(rotaId: string, bairroId: string) {
   const { supabase } = await requireAdminOrGerente();
 
+  const { data: emOutraRota } = await supabase
+    .from("rota_bairros")
+    .select("rota_id")
+    .eq("bairro_id", bairroId)
+    .neq("rota_id", rotaId)
+    .maybeSingle();
+
+  if (emOutraRota) {
+    return { error: "Este bairro já está em outra rota. Remova-o de lá antes de adicionar aqui." };
+  }
+
   const { data: ultimo } = await supabase
     .from("rota_bairros")
     .select("ordem")

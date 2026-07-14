@@ -31,21 +31,40 @@ export default async function RotaDetalhePage({
 
   if (!galpao) redirect("/cadastros/rotas");
 
-  const [{ data: rotaBairros }, { data: bairrosCidade }] = await Promise.all([
-    supabase
-      .from("rota_bairros")
-      .select("*")
-      .eq("rota_id", id)
-      .order("ordem"),
-    supabase
-      .from("bairros")
-      .select("*")
-      .eq("cidade_id", galpao.cidade_id)
-      .order("nome"),
-  ]);
+  const galpaoIdsMesmaCidade = (galpoes ?? [])
+    .filter((g) => g.cidade_id === galpao.cidade_id)
+    .map((g) => g.id);
+
+  const [{ data: rotaBairros }, { data: bairrosCidade }, { data: rotasMesmaCidade }] =
+    await Promise.all([
+      supabase
+        .from("rota_bairros")
+        .select("*")
+        .eq("rota_id", id)
+        .order("ordem"),
+      supabase
+        .from("bairros")
+        .select("*")
+        .eq("cidade_id", galpao.cidade_id)
+        .order("nome"),
+      supabase.from("rotas").select("id").in("galpao_id", galpaoIdsMesmaCidade),
+    ]);
+
+  const rotaIdsMesmaCidade = (rotasMesmaCidade ?? []).map((r) => r.id);
+  const { data: bairrosEmUso } = rotaIdsMesmaCidade.length
+    ? await supabase
+        .from("rota_bairros")
+        .select("bairro_id, rota_id")
+        .in("rota_id", rotaIdsMesmaCidade)
+    : { data: [] };
 
   const bairrosPorId = new Map((bairrosCidade ?? []).map((b) => [b.id, b]));
   const idsJaAdicionados = new Set((rotaBairros ?? []).map((rb) => rb.bairro_id));
+  const idsUsadosEmOutrasRotas = new Set(
+    (bairrosEmUso ?? [])
+      .filter((rb) => rb.rota_id !== id)
+      .map((rb) => rb.bairro_id)
+  );
 
   const bairrosOrdenados = (rotaBairros ?? []).map((rb) => ({
     bairroId: rb.bairro_id,
@@ -54,7 +73,7 @@ export default async function RotaDetalhePage({
   }));
 
   const bairrosDisponiveis = (bairrosCidade ?? [])
-    .filter((b) => !idsJaAdicionados.has(b.id))
+    .filter((b) => !idsJaAdicionados.has(b.id) && !idsUsadosEmOutrasRotas.has(b.id))
     .map((b) => ({ id: b.id, nome: b.nome }));
 
   return (
