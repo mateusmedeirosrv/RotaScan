@@ -6,6 +6,7 @@ import { VolumeDiarioChart } from "./charts/volume-diario";
 import { DistribuicaoTipoEventoChart } from "./charts/distribuicao-tipo-evento";
 import { PorTransportadoraChart } from "./charts/por-transportadora";
 import { RankingChart } from "./charts/ranking";
+import { RankingMotoristasChart } from "./charts/ranking-motoristas";
 import { ComparativoTransportadorasChart } from "./charts/comparativo-transportadoras";
 import { FunilChart } from "./charts/funil";
 import { HeatmapGalpaoChart } from "./charts/heatmap-galpao";
@@ -89,14 +90,7 @@ export function DashboardCharts({
             <CardTitle>Ranking de motoristas (entrega)</CardTitle>
           </CardHeader>
           <CardContent>
-            <RankingChart
-              dados={dados.por_motorista.map((d) => ({
-                nome: d.motorista,
-                total: d.total,
-                dias_trabalhados: d.dias_trabalhados,
-                media_dia: d.media_dia,
-              }))}
-            />
+            <RankingMotoristasChart dados={dados.por_motorista} />
           </CardContent>
         </Card>
 

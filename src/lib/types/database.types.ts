@@ -27,6 +27,8 @@ export interface LinhaExport {
   motorista: string | null;
   codigo: string;
   status: "OK" | "Override aplicado";
+  motivo: string | null;
+  duplicado: boolean;
 }
 
 export interface DashboardBipagensExport {
@@ -45,7 +47,7 @@ export interface DashboardKpis {
   total: number;
   por_dia: { dia: string; total: number }[];
   por_transportadora: { transportadora: string; total: number }[];
-  por_motorista: ({ motorista: string } & RankingItem)[];
+  por_motorista: ({ motorista: string; unicos: number; duplicados: number } & RankingItem)[];
   ranking_colaboradores: ({ colaborador: string } & RankingItem)[];
   por_tipo_evento: { tipo_evento: TipoEvento; total: number }[];
   por_dia_transportadora: { dia: string; transportadora: string; total: number }[];
@@ -66,6 +68,7 @@ export interface DashboardKpis {
   };
   recebimento_total: number;
   entrega_total: number;
+  entrega_duplicados_total: number;
   overrides_aplicados: number;
 }
 
@@ -213,15 +216,17 @@ export interface Database {
           sincronizado_em: string | null;
           ciclo_fechado: boolean;
           motivo: string | null;
+          duplicado: boolean;
         };
         Insert: Omit<
           Database["public"]["Tables"]["bipagens"]["Row"],
-          "id" | "bipado_em" | "override_aplicado" | "ciclo_fechado" | "motivo"
+          "id" | "bipado_em" | "override_aplicado" | "ciclo_fechado" | "motivo" | "duplicado"
         > & {
           bipado_em?: string;
           override_aplicado?: boolean;
           ciclo_fechado?: boolean;
           motivo?: string | null;
+          duplicado?: boolean;
         };
         Update: Partial<Database["public"]["Tables"]["bipagens"]["Insert"]>;
         Relationships: [];

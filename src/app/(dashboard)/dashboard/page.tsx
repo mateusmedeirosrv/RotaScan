@@ -95,6 +95,7 @@ export default async function DashboardPage({
     sankey_fluxo: { recebido: 0, entregue: 0, devolvido: 0, retornado: 0, em_aberto: 0 },
     recebimento_total: 0,
     entrega_total: 0,
+    entrega_duplicados_total: 0,
     overrides_aplicados: 0,
   };
 
@@ -137,7 +138,7 @@ export default async function DashboardPage({
         motoristasSelecionados={motoristaIds}
       />
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-6">
         <Card>
           <CardHeader>
             <CardTitle className="text-sm text-muted-foreground">Total bipado</CardTitle>
@@ -155,6 +156,12 @@ export default async function DashboardPage({
             <CardTitle className="text-sm text-muted-foreground">Entrega</CardTitle>
           </CardHeader>
           <CardContent className="text-2xl font-semibold">{dados.entrega_total}</CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm text-muted-foreground">Entregas duplicadas</CardTitle>
+          </CardHeader>
+          <CardContent className="text-2xl font-semibold">{dados.entrega_duplicados_total}</CardContent>
         </Card>
         <Card>
           <CardHeader>

@@ -79,7 +79,11 @@ function prefixoAindaValido(prefixo: string, valorAtual: string): boolean {
 
 function lerEstadoLocal(
   operacaoId: string
-): { rotaAtivaId?: string; motoristasPorRota?: Record<string, string> } {
+): {
+  rotaAtivaId?: string;
+  motoristasPorRota?: Record<string, string>;
+  modoDuplicadoPorRota?: Record<string, boolean>;
+} {
   if (typeof window === "undefined") return {};
   try {
     const raw = localStorage.getItem(`rotascan:bipagem:${operacaoId}`);
@@ -118,6 +122,7 @@ export function BipagemConsole({
 
   const [rotaAtivaId, setRotaAtivaId] = useState(() => rotas[0]?.id ?? "");
   const [motoristasPorRota, setMotoristasPorRota] = useState<Record<string, string>>({});
+  const [modoDuplicadoPorRota, setModoDuplicadoPorRota] = useState<Record<string, boolean>>({});
   const [codigoInput, setCodigoInput] = useState(""); // mantido só para handleSubmit via Enter
   const [motivoDialogAberto, setMotivoDialogAberto] = useState(false);
   const [motivoCodigoPendente, setMotivoCodigoPendente] = useState<string | null>(null);
@@ -134,7 +139,9 @@ export function BipagemConsole({
   const motoristaObrigatorio = tipoEvento !== "RECEBIMENTO";
   const seletorRotaVisivel = tipoEvento !== "RECEBIMENTO";
   const motivoVisivel = tipoEvento === "RETORNO" || tipoEvento === "DEVOLUCAO_ORIGEM";
+  const seletorDuplicadoVisivel = tipoEvento === "ENTREGA";
   const motoristaAtivoId = motoristasPorRota[rotaAtivaId] ?? "";
+  const duplicadoAtivo = modoDuplicadoPorRota[rotaAtivaId] ?? false;
 
   const hidratadoRef = useRef(false);
 
@@ -154,13 +161,14 @@ export function BipagemConsole({
             )
           : atual
       );
+      setModoDuplicadoPorRota((atual) => salva.modoDuplicadoPorRota ?? atual);
       return;
     }
     localStorage.setItem(
       `rotascan:bipagem:${operacaoId}`,
-      JSON.stringify({ rotaAtivaId, motoristasPorRota })
+      JSON.stringify({ rotaAtivaId, motoristasPorRota, modoDuplicadoPorRota })
     );
-  }, [operacaoId, rotaAtivaId, motoristasPorRota, rotas, motoristas]);
+  }, [operacaoId, rotaAtivaId, motoristasPorRota, modoDuplicadoPorRota, rotas, motoristas]);
 
   useEffect(() => {
     function aoMudarConexao() {
@@ -277,6 +285,7 @@ export function BipagemConsole({
   const totalConfirmadoOperacao =
     Object.values(contagens ?? {}).reduce((a, b) => a + b, 0) + (pendentesOperacao?.length ?? 0);
   const [sessao, setSessao] = useState({ duplicado: 0, erro: 0 });
+  const [duplicadosConfirmados, setDuplicadosConfirmados] = useState(0);
   const ultimoItem = ultimosCombinados[0];
 
   function focarInput() {
@@ -362,6 +371,7 @@ export function BipagemConsole({
   }
 
   async function inserir(codigo: string, overrideAplicado: boolean, motivo: string | null = null) {
+    const duplicadoNoMomento = duplicadoAtivo;
     const resultado = await registrarBipagem(supabase, {
       operacao_id: operacaoId,
       rota_id: rotaAtivaId,
@@ -372,10 +382,12 @@ export function BipagemConsole({
       colaborador_id: colaboradorId,
       override_aplicado: overrideAplicado,
       motivo,
+      duplicado: duplicadoNoMomento,
     });
 
     if (resultado.status === "confirmado") {
       dispararFeedback("confirmado");
+      if (duplicadoNoMomento) setDuplicadosConfirmados((n) => n + 1);
       queryClient.setQueryData(
         ["bipagem-contagens", operacaoId],
         (old: Record<string, number> | undefined) => ({
@@ -399,6 +411,7 @@ export function BipagemConsole({
       );
     } else if (resultado.status === "pendente") {
       dispararFeedback("confirmado");
+      if (duplicadoNoMomento) setDuplicadosConfirmados((n) => n + 1);
     } else if (resultado.status === "duplicado") {
       adicionarEventoSessao(codigo, "duplicado");
     } else {
@@ -654,6 +667,44 @@ export function BipagemConsole({
         </div>
       )}
 
+      {seletorDuplicadoVisivel && (
+        <div className="space-y-1">
+          <Label>Código único ou duplicado?</Label>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setModoDuplicadoPorRota((m) => ({ ...m, [rotaAtivaId]: false }));
+                focarInput();
+              }}
+              className={cn(
+                "rounded-md border px-3 py-1.5 text-sm",
+                !duplicadoAtivo ? "border-foreground bg-foreground text-background" : "text-muted-foreground"
+              )}
+            >
+              Único
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setModoDuplicadoPorRota((m) => ({ ...m, [rotaAtivaId]: true }));
+                focarInput();
+              }}
+              className={cn(
+                "rounded-md border px-3 py-1.5 text-sm",
+                duplicadoAtivo ? "border-foreground bg-foreground text-background" : "text-muted-foreground"
+              )}
+            >
+              Duplicado
+            </button>
+            {duplicadoAtivo && (
+              <span className="text-xs text-muted-foreground">
+                Mesmo código TBR pode ser bipado múltiplas vezes
+              </span>
+            )}
+          </div>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit}>
         {/* input nativo obrigatório: Base UI (@base-ui/react/input) não expõe o DOM
@@ -671,6 +722,9 @@ export function BipagemConsole({
 
       <div className="flex gap-6 text-sm">
         <span>Confirmados: <strong>{totalConfirmadoOperacao}</strong></span>
+        {seletorDuplicadoVisivel && (
+          <span>Entregas duplicadas: <strong>{duplicadosConfirmados}</strong></span>
+        )}
         <span>Duplicados: <strong>{sessao.duplicado}</strong></span>
         <span>Erros: <strong>{sessao.erro}</strong></span>
         <span className="text-muted-foreground">

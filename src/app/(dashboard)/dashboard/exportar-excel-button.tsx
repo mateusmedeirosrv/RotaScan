@@ -70,7 +70,8 @@ export function ExportarExcelButton({
         Motorista: l.motorista ?? "—",
         Código: l.codigo,
         Status: l.status,
-        Motivo: (l as { motivo?: string | null }).motivo ?? "—",
+        Motivo: l.motivo ?? "—",
+        Duplicado: l.duplicado ? "Sim" : "Não",
       }));
 
       const planilha = utils.json_to_sheet(linhas);
