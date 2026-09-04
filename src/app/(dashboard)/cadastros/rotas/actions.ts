@@ -79,6 +79,51 @@ export async function removerBairroDaRota(rotaId: string, bairroId: string) {
   return { error: null };
 }
 
+export async function ordenarBairrosAlfabeticamente(rotaId: string) {
+  const { supabase } = await requireAdminOrGerente();
+
+  const { data: itens } = await supabase
+    .from("rota_bairros")
+    .select("bairro_id")
+    .eq("rota_id", rotaId);
+
+  if (!itens || itens.length === 0) return { error: "Não foi possível reordenar." };
+
+  const { data: bairros } = await supabase
+    .from("bairros")
+    .select("id, nome")
+    .in(
+      "id",
+      itens.map((item) => item.bairro_id)
+    );
+
+  const nomesPorId = new Map((bairros ?? []).map((b) => [b.id, b.nome]));
+
+  const ordenados = [...itens].sort((a, b) =>
+    (nomesPorId.get(a.bairro_id) ?? "").localeCompare(
+      nomesPorId.get(b.bairro_id) ?? "",
+      "pt-BR"
+    )
+  );
+
+  const resultados = await Promise.all(
+    ordenados.map((item, index) =>
+      supabase
+        .from("rota_bairros")
+        .update({ ordem: index })
+        .eq("rota_id", rotaId)
+        .eq("bairro_id", item.bairro_id)
+    )
+  );
+
+  if (resultados.some((r) => r.error)) {
+    return { error: "Não foi possível reordenar." };
+  }
+
+  revalidatePath(`/cadastros/rotas/${rotaId}`);
+  return { error: null };
+}
+
 export async function moverBairro(
   rotaId: string,
   bairroId: string,

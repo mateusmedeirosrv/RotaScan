@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowDown, ArrowUp, X } from "lucide-react";
+import { ArrowDown, ArrowDownAZ, ArrowUp, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,6 +15,7 @@ import {
   adicionarBairroNaRota,
   removerBairroDaRota,
   moverBairro,
+  ordenarBairrosAlfabeticamente,
 } from "../actions";
 
 type BairroOrdenado = { bairroId: string; nome: string; ordem: number };
@@ -62,8 +63,30 @@ export function RotaBairrosEditor({
     if (result.error) toast.error(result.error);
   }
 
+  async function handleOrdenarAZ() {
+    setPendente("ordenar");
+    const result = await ordenarBairrosAlfabeticamente(rotaId);
+    setPendente(null);
+
+    if (result.error) toast.error(result.error);
+  }
+
   return (
     <div className="space-y-4">
+      {bairrosOrdenados.length > 1 && (
+        <div className="flex justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={pendente === "ordenar"}
+            onClick={handleOrdenarAZ}
+          >
+            <ArrowDownAZ className="mr-1" />
+            Ordenar A-Z
+          </Button>
+        </div>
+      )}
       {bairrosOrdenados.length ? (
         <ul className="divide-y rounded-lg border">
           {bairrosOrdenados.map((item, index) => (
