@@ -115,6 +115,16 @@ export function BipagemConsole({
   sons: { confirmado: string; duplicado: string; erro: string };
 }) {
   const supabase = useMemo(() => createClient(), []);
+  // null = transportadora sem regex cadastrado (qualquer código não vazio é aceito)
+  const validacao = useMemo(() => {
+    if (!regexValidacao) return null;
+    const prefixo = prefixoLiteral(regexValidacao).toUpperCase();
+    return {
+      regex: new RegExp(regexValidacao, "i"),
+      prefixo,
+      comprimento: comprimentoMaximo(regexValidacao, prefixo),
+    };
+  }, [regexValidacao]);
   const queryClient = useQueryClient();
   const inputRef = useRef<HTMLInputElement>(null);
   const motivoDialogInputRef = useRef<HTMLInputElement>(null);
@@ -424,8 +434,7 @@ export function BipagemConsole({
     const codigo = codigoBruto.trim();
     if (!codigo) return;
 
-    const regexEfetivo = regexValidacao ?? "^[Tt][Bb][Rr]\\d{9}$";
-    if (!new RegExp(regexEfetivo, "i").test(codigo)) {
+    if (validacao && !validacao.regex.test(codigo)) {
       adicionarEventoSessao(codigo, "erro");
       return;
     }
@@ -509,27 +518,31 @@ export function BipagemConsole({
 
     if (!up) return;
 
-    // Prefixo deve ser TBR (char a char)
-    const prefixoAtual = up.slice(0, Math.min(3, up.length));
-    if (prefixoAtual !== "TBR".slice(0, prefixoAtual.length)) {
+    // Sem regex cadastrado na transportadora: aceita qualquer código, enviado via Enter
+    if (!validacao) return;
+
+    // Prefixo literal do regex (ex.: TBR) validado char a char
+    if (!prefixoAindaValido(validacao.prefixo, up)) {
       dispararErroFormato(up);
       return;
     }
 
-    // Após TBR, só dígitos são permitidos — rejeita qualquer caractere inválido imediatamente
-    if (up.length > 3 && !/^\d+$/.test(up.slice(3))) {
+    // Formatos fora do padrão "prefixo + \d{N}" só são validados no Enter
+    if (validacao.comprimento === null) return;
+
+    // Após o prefixo, só dígitos são permitidos — rejeita qualquer caractere inválido imediatamente
+    if (up.length > validacao.prefixo.length && !/^\d+$/.test(up.slice(validacao.prefixo.length))) {
       dispararErroFormato(up);
       return;
     }
 
-    // Tamanho máximo: TBR + 9 dígitos = 12
-    if (up.length > 12) {
+    if (up.length > validacao.comprimento) {
       dispararErroFormato(up);
       return;
     }
 
     // Código completo e válido
-    if (/^TBR\d{9}$/.test(up)) {
+    if (up.length === validacao.comprimento && validacao.regex.test(up)) {
       limparInput();
       void processarCodigo(up);
     }
