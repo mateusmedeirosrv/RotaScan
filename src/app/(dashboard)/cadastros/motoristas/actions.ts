@@ -40,3 +40,32 @@ export async function atualizarMotorista(
   revalidatePath("/cadastros/motoristas");
   return { error: null };
 }
+
+type AdvertenciaInput = {
+  motorista_id: string;
+  galpao_id: string;
+  motivo: string;
+  data_vigencia: string;
+  local: string | null;
+};
+
+export async function criarAdvertencia(input: AdvertenciaInput) {
+  const { supabase } = await requireAdminOrGerente();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { data: colaborador } = await supabase
+    .from("colaboradores")
+    .select("id")
+    .eq("user_id", user!.id)
+    .single();
+
+  const { error } = await supabase.from("advertencias").insert({
+    ...input,
+    colaborador_id: colaborador!.id,
+  });
+
+  if (error) return { error: "Não foi possível registrar a advertência." };
+
+  return { error: null };
+}

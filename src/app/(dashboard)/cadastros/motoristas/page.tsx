@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/table";
 import { PageHeader } from "@/components/page-header";
 import { MotoristaFormDialog } from "./motorista-form";
+import { AdvertenciaFormDialog } from "./advertencia-form";
 
 export default async function MotoristasPage() {
   const { supabase } = await requireAdminOrGerente();
@@ -49,7 +50,7 @@ export default async function MotoristasPage() {
             <TableHead>Placa</TableHead>
             <TableHead>Telefone</TableHead>
             <TableHead>Status</TableHead>
-            <TableHead className="w-20" />
+            <TableHead className="w-40" />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -65,13 +66,21 @@ export default async function MotoristasPage() {
                 <TableCell>{motorista.placa ?? "—"}</TableCell>
                 <TableCell>{motorista.telefone ?? "—"}</TableCell>
                 <TableCell>{motorista.ativo ? "Ativo" : "Inativo"}</TableCell>
-                <TableCell>
+                <TableCell className="space-x-1 whitespace-nowrap">
                   <MotoristaFormDialog
                     motorista={motorista}
                     galpoes={galpoes ?? []}
                     trigger={
                       <Button variant="ghost" size="sm">
                         Editar
+                      </Button>
+                    }
+                  />
+                  <AdvertenciaFormDialog
+                    motorista={motorista}
+                    trigger={
+                      <Button variant="outline" size="sm">
+                        Advertência
                       </Button>
                     }
                   />

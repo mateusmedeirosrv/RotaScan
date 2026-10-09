@@ -156,6 +156,21 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["motoristas"]["Insert"]>;
         Relationships: [];
       };
+      advertencias: {
+        Row: {
+          id: string;
+          motorista_id: string;
+          galpao_id: string;
+          colaborador_id: string;
+          motivo: string;
+          data_vigencia: string;
+          local: string | null;
+          criado_em: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["advertencias"]["Row"], "id" | "criado_em">;
+        Update: Partial<Database["public"]["Tables"]["advertencias"]["Insert"]>;
+        Relationships: [];
+      };
       rotas: {
         Row: {
           id: string;
