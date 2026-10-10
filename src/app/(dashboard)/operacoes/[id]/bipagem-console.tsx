@@ -49,25 +49,72 @@ const FLASH_CLASSE: Record<"confirmado" | "duplicado" | "erro", string> = {
   erro: "bg-red-500/25",
 };
 
-// Extrai o prefixo literal de um regex de validação (ex.: "^TBR\d{9}$" -> "TBR").
-function prefixoLiteral(regexFonte: string): string {
-  const fonte = regexFonte.startsWith("^") ? regexFonte.slice(1) : regexFonte;
-  let prefixo = "";
-  for (const caractere of fonte) {
-    if (/[\\^$.*+?()[\]{}|]/.test(caractere)) break;
-    prefixo += caractere;
+// Envio automático de códigos sem tamanho fixo: o scanner digita em rajada
+// (poucos ms entre caracteres); uma pausa após a rajada indica fim da leitura.
+const INTERVALO_MAX_SCANNER_MS = 60;
+const PAUSA_FIM_DE_LEITURA_MS = 120;
+const TAMANHO_MIN_ENVIO_AUTOMATICO = 4;
+
+const ESPECIAL_REGEX =/[\\^$.*+?()[\]{}|]/;
+
+// Prefixo fixo (em maiúsculas) de um trecho de regex, ou null se não for reconhecido.
+// Aceita literal (TBR), grupo de alternativas equivalentes ((?:tbr|TBR)) e
+// classes por letra ([Tt][Bb][Rr]) — o campo de bipagem sempre converte para maiúsculas.
+function prefixoFixo(trecho: string): string | null {
+  if (!ESPECIAL_REGEX.test(trecho)) return trecho.toUpperCase();
+
+  const grupo = /^\((?:\?:)?([^()]*)\)$/.exec(trecho);
+  if (grupo) {
+    const alternativas = grupo[1].split("|");
+    if (alternativas.some((a) => ESPECIAL_REGEX.test(a))) return null;
+    const unicas = new Set(alternativas.map((a) => a.toUpperCase()));
+    return unicas.size === 1 ? [...unicas][0] : null;
   }
-  return prefixo;
+
+  if (/^(?:\[[^\]\\^-]+\])+$/.test(trecho)) {
+    let prefixo = "";
+    for (const classe of trecho.slice(1, -1).split("][")) {
+      const unicas = new Set(classe.toUpperCase());
+      if (unicas.size !== 1) return null;
+      prefixo += [...unicas][0];
+    }
+    return prefixo;
+  }
+
+  return null;
 }
 
-// Se o regex for "prefixo + \d{N}", retorna o comprimento total esperado.
-// Para formatos que não seguem esse padrão, retorna null (sem corte por tamanho).
-function comprimentoMaximo(regexFonte: string, prefixo: string): number | null {
+// Trecho literal inicial de um regex (ex.: "ML\d+" -> "ML"), em maiúsculas.
+function prefixoLiteral(fonte: string): string {
+  if (fonte.includes("|")) return "";
+  let prefixo = "";
+  for (const caractere of fonte) {
+    if (ESPECIAL_REGEX.test(caractere)) {
+      // Quantificador torna o último caractere opcional/repetido: não é fixo
+      if ("?*{".includes(caractere)) prefixo = prefixo.slice(0, -1);
+      break;
+    }
+    prefixo += caractere;
+  }
+  return prefixo.toUpperCase();
+}
+
+// Analisa o regex de validação para a checagem em tempo real (char a char).
+// Para "^prefixo\d{N}$" retorna o prefixo e o comprimento total esperado; formatos
+// que não seguem esse padrão ficam sem comprimento e são validados só no Enter.
+function analisarRegex(regexFonte: string): { prefixo: string; comprimento: number | null } {
+  const ancorado = regexFonte.startsWith("^") && regexFonte.endsWith("$");
   let fonte = regexFonte.startsWith("^") ? regexFonte.slice(1) : regexFonte;
   if (fonte.endsWith("$")) fonte = fonte.slice(0, -1);
-  const resto = fonte.slice(prefixo.length);
-  const match = /^\\d\{(\d+)\}$/.exec(resto);
-  return match ? prefixo.length + Number(match[1]) : null;
+
+  const digitos = /^(.*?)(?:\\d|\[0-9\])\{(\d+)\}$/.exec(fonte);
+  if (digitos) {
+    const prefixo = prefixoFixo(digitos[1]);
+    if (prefixo === null) return { prefixo: "", comprimento: null };
+    return { prefixo, comprimento: ancorado ? prefixo.length + Number(digitos[2]) : null };
+  }
+
+  return { prefixo: prefixoLiteral(fonte), comprimento: null };
 }
 
 // Compara apenas a parte já digitada com o prefixo esperado (prefixo incompleto = válido).
@@ -118,17 +165,21 @@ export function BipagemConsole({
   // null = transportadora sem regex cadastrado (qualquer código não vazio é aceito)
   const validacao = useMemo(() => {
     if (!regexValidacao) return null;
-    const prefixo = prefixoLiteral(regexValidacao).toUpperCase();
-    return {
-      regex: new RegExp(regexValidacao, "i"),
-      prefixo,
-      comprimento: comprimentoMaximo(regexValidacao, prefixo),
-    };
+    return { regex: new RegExp(regexValidacao, "i"), ...analisarRegex(regexValidacao) };
   }, [regexValidacao]);
   const queryClient = useQueryClient();
   const inputRef = useRef<HTMLInputElement>(null);
   const motivoDialogInputRef = useRef<HTMLInputElement>(null);
   const travadoRef = useRef(false);
+  // Ritmo da digitação do código atual, para distinguir scanner (rajada) de teclado
+  const rajadaRef = useRef({ ultimoEm: 0, tamanho: 0, rapida: true });
+  const envioAutomaticoRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (envioAutomaticoRef.current) clearTimeout(envioAutomaticoRef.current);
+    };
+  }, []);
 
   const [rotaAtivaId, setRotaAtivaId] = useState(() => rotas[0]?.id ?? "");
   const [motoristasPorRota, setMotoristasPorRota] = useState<Record<string, string>>({});
@@ -487,12 +538,37 @@ export function BipagemConsole({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const codigo = inputRef.current?.value ?? "";
-    if (inputRef.current) inputRef.current.value = "";
+    limparInput();
     await processarCodigo(codigo);
   }
 
   function limparInput() {
     if (inputRef.current) inputRef.current.value = "";
+    if (envioAutomaticoRef.current) clearTimeout(envioAutomaticoRef.current);
+    envioAutomaticoRef.current = null;
+    rajadaRef.current.tamanho = 0;
+  }
+
+  // Códigos sem tamanho fixo conhecido: registra sozinho quando a rajada do scanner
+  // termina. Digitação manual (intervalos longos entre teclas) continua exigindo Enter.
+  function agendarEnvioAutomatico(valor: string) {
+    const rajada = rajadaRef.current;
+    const agora = performance.now();
+    if (rajada.tamanho === 0) rajada.rapida = true;
+    else if (agora - rajada.ultimoEm > INTERVALO_MAX_SCANNER_MS) rajada.rapida = false;
+    rajada.ultimoEm = agora;
+    rajada.tamanho = valor.length;
+
+    if (envioAutomaticoRef.current) clearTimeout(envioAutomaticoRef.current);
+    envioAutomaticoRef.current = null;
+    if (!rajada.rapida || valor.length < TAMANHO_MIN_ENVIO_AUTOMATICO) return;
+
+    envioAutomaticoRef.current = setTimeout(() => {
+      const codigo = inputRef.current?.value ?? "";
+      if (!codigo || travadoRef.current) return;
+      limparInput();
+      void processarCodigo(codigo);
+    }, PAUSA_FIM_DE_LEITURA_MS);
   }
 
   function dispararErroFormato(valorInvalido: string) {
@@ -516,10 +592,16 @@ export function BipagemConsole({
       return;
     }
 
-    if (!up) return;
+    if (!up) {
+      limparInput();
+      return;
+    }
 
-    // Sem regex cadastrado na transportadora: aceita qualquer código, enviado via Enter
-    if (!validacao) return;
+    // Sem regex cadastrado na transportadora: aceita qualquer código, ao fim da leitura
+    if (!validacao) {
+      agendarEnvioAutomatico(up);
+      return;
+    }
 
     // Prefixo literal do regex (ex.: TBR) validado char a char
     if (!prefixoAindaValido(validacao.prefixo, up)) {
@@ -527,8 +609,11 @@ export function BipagemConsole({
       return;
     }
 
-    // Formatos fora do padrão "prefixo + \d{N}" só são validados no Enter
-    if (validacao.comprimento === null) return;
+    // Formatos fora do padrão "prefixo + \d{N}" são validados ao fim da leitura
+    if (validacao.comprimento === null) {
+      agendarEnvioAutomatico(up);
+      return;
+    }
 
     // Após o prefixo, só dígitos são permitidos — rejeita qualquer caractere inválido imediatamente
     if (up.length > validacao.prefixo.length && !/^\d+$/.test(up.slice(validacao.prefixo.length))) {
