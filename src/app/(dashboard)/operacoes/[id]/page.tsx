@@ -132,7 +132,12 @@ export default async function OperacaoDetalhePage({
           {colaborador.papel === "admin" && !operacao.ativa && (
             <ExcluirOperacaoButton operacaoId={operacao.id} />
           )}
-          {!finalizada && <FinalizarOperacaoButton operacaoId={operacao.id} />}
+          {!finalizada && (
+            <FinalizarOperacaoButton
+              operacaoId={operacao.id}
+              semManifesto={ehRecebimento && !manifesto}
+            />
+          )}
         </div>
       </div>
 

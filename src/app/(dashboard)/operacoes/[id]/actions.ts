@@ -178,7 +178,7 @@ export async function importarManifesto(
   return { error: null };
 }
 
-export async function finalizarOperacao(operacaoId: string) {
+export async function finalizarOperacao(operacaoId: string, confirmarSemManifesto = false) {
   const { supabase } = await requireAuth();
 
   const { data: operacao } = await supabase
@@ -187,7 +187,9 @@ export async function finalizarOperacao(operacaoId: string) {
     .eq("id", operacaoId)
     .maybeSingle();
 
-  if (operacao?.tipo_evento === "RECEBIMENTO") {
+  if (!operacao) return { error: "Operação não encontrada." };
+
+  if (operacao.tipo_evento === "RECEBIMENTO" && !confirmarSemManifesto) {
     const { data: manifesto } = await supabase
       .from("manifestos")
       .select("id")
@@ -195,16 +197,23 @@ export async function finalizarOperacao(operacaoId: string) {
       .maybeSingle();
 
     if (!manifesto) {
-      return { error: "Importe o manifesto antes de finalizar esta operação de recebimento." };
+      return {
+        error: "Nenhum manifesto importado. Confirme para finalizar sem conferência.",
+      };
     }
   }
 
-  const { error } = await supabase
+  // select() para detectar quando o RLS bloqueia o update sem retornar erro
+  const { data: atualizadas, error } = await supabase
     .from("operacoes")
     .update({ status: "FINALIZADA", finalizada_em: new Date().toISOString() })
-    .eq("id", operacaoId);
+    .eq("id", operacaoId)
+    .select("id");
 
   if (error) return { error: "Não foi possível finalizar a operação." };
+  if (!atualizadas?.length) {
+    return { error: "Você não tem permissão para finalizar esta operação." };
+  }
 
   revalidatePath(`/operacoes/${operacaoId}`);
   revalidatePath("/operacoes");
