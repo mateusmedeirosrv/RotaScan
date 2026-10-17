@@ -153,7 +153,7 @@ A **Operação** é a unidade de trabalho que agrupa bipagens feitas por um cola
 - Sub-contador por rota ativa (ex.: "Rota Centro: 47 · Rota Bairro Alto: 32")
 - Lista das últimas 10 bipagens da rota ativa com ícone de status
 - Feedback visual de tela cheia (flash verde/amarelo/vermelho)
-- Botão "Excluir bipagem": abre uma busca por código (digitado ou bipado) em todas as rotas da operação; o colaborador escolhe a bipagem na lista e confirma a exclusão. Vale para Recebimento, Entrega, Retorno e Devolução, inclui bipagens pendentes de sincronização e registra `bipagem_desfeita` na auditoria. Pelo RLS, o colaborador só exclui as próprias bipagens em operação `EM_ANDAMENTO` (admin exclui qualquer uma)
+- Botão "Excluir bipagem": abre uma busca por código (digitado ou bipado) em todas as rotas da operação; o colaborador escolhe a bipagem na lista e confirma a exclusão. Vale para Recebimento, Entrega, Retorno e Devolução, inclui bipagens pendentes de sincronização e registra `bipagem_desfeita` na auditoria. Pelo RLS, em operação `EM_ANDAMENTO`: o colaborador exclui só as próprias bipagens, o gerente exclui as de qualquer colaborador do seu galpão e o admin exclui qualquer uma
 - Botão "Trocar Rota" (atalho de teclado: F2 ou similar — não tirar mão do scanner)
 - Botão grande "Finalizar Operação" (com confirmação)
 - Indicador de modo online/offline

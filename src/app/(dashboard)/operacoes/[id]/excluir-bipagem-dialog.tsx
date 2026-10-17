@@ -119,7 +119,7 @@ export function ExcluirBipagemDialog({
       setConfirmando(null);
       onExcluida({ rotaId: item.rotaId, pendente: item.pendente });
     } catch {
-      toast.error("Não foi possível excluir. Só é possível excluir bipagens feitas por você.");
+      toast.error("Não foi possível excluir. Colaborador só exclui as próprias bipagens; gerente, as do próprio galpão.");
     } finally {
       setExcluindo(false);
     }
