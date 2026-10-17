@@ -110,6 +110,28 @@ export async function buscarContagemPorRota(
   return contagens;
 }
 
+// Bipagens da operação (todas as rotas) cujo código contém o termo; sem termo, as mais recentes.
+export async function buscarBipagensOperacao(
+  supabase: Supabase,
+  operacaoId: string,
+  termo: string,
+  limite = 20
+): Promise<BipagemRow[]> {
+  let query = supabase
+    .from("bipagens")
+    .select("*")
+    .eq("operacao_id", operacaoId)
+    .order("bipado_em", { ascending: false })
+    .limit(limite);
+
+  const limpo = termo.trim();
+  if (limpo) query = query.ilike("codigo", `%${limpo.replace(/[%_\\]/g, "\\$&")}%`);
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return data ?? [];
+}
+
 export async function desfazerBipagem(supabase: Supabase, bipagemId: string): Promise<void> {
   const { error } = await supabase.rpc("desfazer_bipagem", { p_bipagem_id: bipagemId });
   if (error) throw error;

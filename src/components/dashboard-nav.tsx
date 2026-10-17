@@ -13,6 +13,7 @@ type Papel = Database["public"]["Tables"]["colaboradores"]["Row"]["papel"];
 
 const LINKS_TODOS = [
   { href: "/operacoes", label: "Operações" },
+  { href: "/pesquisa", label: "Pesquisa" },
   { href: "/ferramentas/qrcode", label: "Etiquetas QR" },
 ];
 

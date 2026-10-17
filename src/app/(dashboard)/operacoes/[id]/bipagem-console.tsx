@@ -10,11 +10,11 @@ import {
   registrarBipagem,
   buscarUltimasBipagens,
   buscarContagemPorRota,
-  desfazerBipagem,
   existeRecebimentoPrevio,
   tentarOverride,
 } from "@/lib/bipagem/registrar";
 import { dbOffline } from "@/lib/bipagem/db-offline";
+import { ExcluirBipagemDialog } from "./excluir-bipagem-dialog";
 import type { Database } from "@/lib/types/database.types";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -196,6 +196,7 @@ export function BipagemConsole({
   const [senhaOverride, setSenhaOverride] = useState("");
   const [enviandoOverride, setEnviandoOverride] = useState(false);
   const [online, setOnline] = useState(true);
+  const [exclusaoAberta, setExclusaoAberta] = useState(false);
 
   const motoristaObrigatorio = tipoEvento !== "RECEBIMENTO";
   const seletorRotaVisivel = tipoEvento !== "RECEBIMENTO";
@@ -347,7 +348,6 @@ export function BipagemConsole({
     Object.values(contagens ?? {}).reduce((a, b) => a + b, 0) + (pendentesOperacao?.length ?? 0);
   const [sessao, setSessao] = useState({ duplicado: 0, erro: 0 });
   const [duplicadosConfirmados, setDuplicadosConfirmados] = useState(0);
-  const ultimoItem = ultimosCombinados[0];
 
   function focarInput() {
     requestAnimationFrame(() => inputRef.current?.focus());
@@ -361,6 +361,7 @@ export function BipagemConsole({
         !overlayRotaAberto &&
         !overrideAberto &&
         !motivoDialogAberto &&
+        !exclusaoAberta &&
         document.activeElement !== inputRef.current &&
         document.activeElement !== motivoDialogInputRef.current
       ) {
@@ -368,12 +369,12 @@ export function BipagemConsole({
       }
     }, 750);
     return () => clearInterval(id);
-  }, [overlayRotaAberto, overrideAberto, motivoDialogAberto]);
+  }, [overlayRotaAberto, overrideAberto, motivoDialogAberto, exclusaoAberta]);
 
   useEffect(() => {
     if (!seletorRotaVisivel) return;
     function handler(e: KeyboardEvent) {
-      if (e.key === "F2" && !overrideAberto) {
+      if (e.key === "F2" && !overrideAberto && !exclusaoAberta) {
         e.preventDefault();
         setOverlayIndice(rotas.findIndex((r) => r.id === rotaAtivaId));
         setOverlayRotaAberto(true);
@@ -381,7 +382,7 @@ export function BipagemConsole({
     }
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [seletorRotaVisivel, overrideAberto, rotaAtivaId, rotas]);
+  }, [seletorRotaVisivel, overrideAberto, exclusaoAberta, rotaAtivaId, rotas]);
 
   useEffect(() => {
     if (!overlayRotaAberto) return;
@@ -662,35 +663,18 @@ export function BipagemConsole({
     }
   }
 
-  async function handleDesfazer() {
-    if (!ultimoItem || ultimoItem.status === "duplicado" || ultimoItem.status === "erro") return;
-
-    if (ultimoItem.status === "pendente") {
-      await dbOffline.fila.delete(Number(ultimoItem.id));
-      toast.success("Bipagem pendente removida.");
-      focarInput();
-      return;
-    }
-
-    try {
-      await desfazerBipagem(supabase, ultimoItem.id);
-      queryClient.setQueryData(
-        ["bipagem-ultimos", operacaoId, rotaAtivaId],
-        (old: EventoBipagem[] | undefined) => (old ?? []).filter((e) => e.id !== ultimoItem.id)
-      );
-      queryClient.setQueryData(
-        ["bipagem-contagens", operacaoId],
-        (old: Record<string, number> | undefined) => ({
-          ...old,
-          [rotaAtivaId]: Math.max(0, (old?.[rotaAtivaId] ?? 1) - 1),
-        })
-      );
-      toast.success("Bipagem desfeita.");
-    } catch {
-      toast.error("Não foi possível desfazer a bipagem.");
-    } finally {
-      focarInput();
-    }
+  function aoExcluirBipagem({ rotaId, pendente }: { rotaId: string; pendente: boolean }) {
+    queryClient.invalidateQueries({ queryKey: ["bipagem-busca", operacaoId] });
+    // Pendentes saem da fila do Dexie e as telas se atualizam sozinhas
+    if (pendente) return;
+    queryClient.setQueryData(
+      ["bipagem-contagens", operacaoId],
+      (old: Record<string, number> | undefined) => ({
+        ...old,
+        [rotaId]: Math.max(0, (old?.[rotaId] ?? 1) - 1),
+      })
+    );
+    queryClient.invalidateQueries({ queryKey: ["bipagem-ultimos", operacaoId, rotaId] });
   }
 
   if (rotas.length === 0) {
@@ -834,10 +818,9 @@ export function BipagemConsole({
         type="button"
         variant="outline"
         size="sm"
-        disabled={!ultimoItem || ultimoItem.status === "duplicado" || ultimoItem.status === "erro"}
-        onClick={handleDesfazer}
+        onClick={() => setExclusaoAberta(true)}
       >
-        Desfazer última bipagem
+        Excluir bipagem
       </Button>
 
       <ul className="divide-y text-sm">
@@ -888,6 +871,18 @@ export function BipagemConsole({
           </div>
         </div>
       )}
+
+      <ExcluirBipagemDialog
+        open={exclusaoAberta}
+        onOpenChange={(open) => {
+          setExclusaoAberta(open);
+          if (!open) focarInput();
+        }}
+        supabase={supabase}
+        operacaoId={operacaoId}
+        rotas={rotas}
+        onExcluida={aoExcluirBipagem}
+      />
 
       <Dialog
         open={motivoDialogAberto}

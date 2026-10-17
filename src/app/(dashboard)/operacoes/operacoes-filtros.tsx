@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { GrupoChecklist } from "@/components/grupo-checklist";
 
 const TIPO_EVENTO_OPCOES = [
   { id: "RECEBIMENTO", nome: "Recebimento" },
@@ -146,54 +147,6 @@ export function OperacoesFiltros({
           Limpar filtros
         </Button>
       </div>
-    </div>
-  );
-}
-
-function GrupoChecklist({
-  label,
-  opcoes,
-  selecionados,
-  onChange,
-}: {
-  label: string;
-  opcoes: Opcao[];
-  selecionados: string[];
-  onChange: (valores: string[]) => void;
-}) {
-  const isTodos = selecionados.length === 0;
-
-  function toggle(id: string) {
-    if (selecionados.includes(id)) {
-      onChange(selecionados.filter((s) => s !== id));
-    } else {
-      onChange([...selecionados, id]);
-    }
-  }
-
-  return (
-    <div className="space-y-1.5 min-w-36">
-      <p className="text-sm font-medium">{label}</p>
-      <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
-        <input
-          type="checkbox"
-          checked={isTodos}
-          onChange={() => !isTodos && onChange([])}
-          className="h-4 w-4 accent-primary"
-        />
-        Todos
-      </label>
-      {opcoes.map((opcao) => (
-        <label key={opcao.id} className="flex items-center gap-2 text-sm cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={selecionados.includes(opcao.id)}
-            onChange={() => toggle(opcao.id)}
-            className="h-4 w-4 accent-primary"
-          />
-          {opcao.nome}
-        </label>
-      ))}
     </div>
   );
 }

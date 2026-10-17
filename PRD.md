@@ -109,6 +109,7 @@ A **Operação** é a unidade de trabalho que agrupa bipagens feitas por um cola
 - Pré-validação: identificar colunas (código, descrição, etc.)
 - Manifesto fica vinculado à **operação de Recebimento** (não mais à rota)
 - Após finalização da operação, relatório de conferência: **Encontradas** / **Faltantes** / **Extras**
+- O manifesto é opcional para finalizar: sem manifesto, o diálogo de finalização avisa que a conferência não será feita e pede confirmação
 
 #### 3.2.4 Bipagem (tela crítica)
 
@@ -152,7 +153,7 @@ A **Operação** é a unidade de trabalho que agrupa bipagens feitas por um cola
 - Sub-contador por rota ativa (ex.: "Rota Centro: 47 · Rota Bairro Alto: 32")
 - Lista das últimas 10 bipagens da rota ativa com ícone de status
 - Feedback visual de tela cheia (flash verde/amarelo/vermelho)
-- Botão "Desfazer última bipagem" (remove apenas da rota ativa)
+- Botão "Excluir bipagem": abre uma busca por código (digitado ou bipado) em todas as rotas da operação; o colaborador escolhe a bipagem na lista e confirma a exclusão. Vale para Recebimento, Entrega, Retorno e Devolução, inclui bipagens pendentes de sincronização e registra `bipagem_desfeita` na auditoria. Pelo RLS, o colaborador só exclui as próprias bipagens em operação `EM_ANDAMENTO` (admin exclui qualquer uma)
 - Botão "Trocar Rota" (atalho de teclado: F2 ou similar — não tirar mão do scanner)
 - Botão grande "Finalizar Operação" (com confirmação)
 - Indicador de modo online/offline
@@ -210,6 +211,24 @@ Tela de busca: digite um código → vê toda a jornada:
 - Qual motorista levou
 - Se voltou (retorno/devolução)
 - Status atual
+
+#### 3.3.3 Pesquisa
+
+Tela `/pesquisa` (menu "Pesquisa", disponível para todos os papéis; o RLS limita o que cada um vê) que lista todas as bipagens com os dados da operação, para localizar encomendas, motoristas, transportadoras e rotas.
+
+**Colunas:** data/hora, código (com marcação de duplicado/override), tipo de evento, transportadora, rota, motorista, colaborador, motivo e operação (data + status, com link para a operação).
+
+**Filtros** (combináveis; cada lista aceita um ou vários itens, nenhum marcado = todos):
+- Código: parte do código (busca parcial) ou vários códigos separados por espaço/vírgula (busca exata em lote)
+- Período (de / até, pela data da bipagem)
+- Tipo de evento
+- Transportadora
+- Motorista, Rota e Colaborador (com campo para filtrar listas longas)
+
+**Outros:**
+- Paginação de 100 linhas, com total de resultados
+- Filtros ficam na URL (dá para compartilhar o link da pesquisa)
+- Botão "Exportar Excel" com o resultado filtrado (limite de 20.000 linhas)
 
 ### 3.4 Módulo de Ferramentas
 
@@ -501,6 +520,7 @@ INSERT INTO transportadoras (nome, regex_validacao) VALUES
 | **8** | Dashboard (filtros por operação, KPIs, gráficos, comparação Receb. × Entrega) | 2-3 dias |
 | **9** | Exports (Excel + PDF de QR Codes em A4) | 1-2 dias |
 | **10** | Configurações + override (painel admin, senha hashada, log de auditoria, forçar finalizar operação travada) | 1-2 dias |
+| **11** | Tela de Pesquisa com filtros múltiplos + exclusão de bipagem por código na tela de bipagem | — |
 
 **Total estimado:** ~3–4 semanas para MVP completo em produção.
 
