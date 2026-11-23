@@ -8,6 +8,7 @@ export const TIPO_EVENTO_LABEL: Record<string, string> = {
   ENTREGA: "Entrega",
   DEVOLUCAO_ORIGEM: "Devolução à Origem",
   RETORNO: "Retorno",
+  CONFERENCIA: "Conferência",
 };
 
 export type FiltrosPesquisa = {

@@ -10,6 +10,7 @@ const ORDEM_TIPO_EVENTO: TipoEvento[] = [
   "ENTREGA",
   "DEVOLUCAO_ORIGEM",
   "RETORNO",
+  "CONFERENCIA",
 ];
 
 export function HeatmapGalpaoChart({

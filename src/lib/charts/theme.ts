@@ -29,6 +29,7 @@ export const TIPO_EVENTO_LABEL: Record<string, string> = {
   ENTREGA: "Entrega",
   DEVOLUCAO_ORIGEM: "Devolução à Origem",
   RETORNO: "Retorno",
+  CONFERENCIA: "Conferência",
 };
 
 export const TIPO_EVENTO_COLOR: Record<string, string> = {
@@ -36,6 +37,7 @@ export const TIPO_EVENTO_COLOR: Record<string, string> = {
   ENTREGA: CHART_CATEGORICAL[1],
   DEVOLUCAO_ORIGEM: CHART_CATEGORICAL[2],
   RETORNO: CHART_CATEGORICAL[3],
+  CONFERENCIA: CHART_CATEGORICAL[4],
 };
 
 // Identidade fixa por transportadora (marca) — extras caem na paleta restante.

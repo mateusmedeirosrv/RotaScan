@@ -75,6 +75,7 @@ export default async function DashboardPage({
     ENTREGA: "Entrega",
     DEVOLUCAO_ORIGEM: "Devolução à Origem",
     RETORNO: "Retorno",
+    CONFERENCIA: "Conferência",
   };
   const operacoes = (operacoesRaw ?? []).map((o) => ({
     id: o.id,

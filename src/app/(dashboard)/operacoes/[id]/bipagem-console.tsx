@@ -15,6 +15,12 @@ import {
 } from "@/lib/bipagem/registrar";
 import { dbOffline } from "@/lib/bipagem/db-offline";
 import { ExcluirBipagemDialog } from "./excluir-bipagem-dialog";
+import { ExportarEntregasPdfButton } from "./exportar-entregas-pdf";
+import {
+  buscarEncomendasPorCodigos,
+  formatarPrazo,
+  formatarVolume,
+} from "@/lib/encomendas/consulta";
 import type { Database } from "@/lib/types/database.types";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -150,6 +156,8 @@ export function BipagemConsole({
   motoristas,
   bloqueioConfig,
   sons,
+  transportadoraNome = "",
+  dataOperacao = "",
 }: {
   operacaoId: string;
   colaboradorId: string;
@@ -160,6 +168,8 @@ export function BipagemConsole({
   motoristas: Motorista[];
   bloqueioConfig: BloqueioConfig;
   sons: { confirmado: string; duplicado: string; erro: string };
+  transportadoraNome?: string;
+  dataOperacao?: string;
 }) {
   const supabase = useMemo(() => createClient(), []);
   // null = transportadora sem regex cadastrado (qualquer código não vazio é aceito)
@@ -202,6 +212,8 @@ export function BipagemConsole({
   const seletorRotaVisivel = tipoEvento !== "RECEBIMENTO";
   const motivoVisivel = tipoEvento === "RETORNO" || tipoEvento === "DEVOLUCAO_ORIGEM";
   const seletorDuplicadoVisivel = tipoEvento === "ENTREGA";
+  // Entrega exibe os dados da encomenda (planilha do Recebimento / Conferência)
+  const exibirEncomenda = tipoEvento === "ENTREGA";
   const motoristaAtivoId = motoristasPorRota[rotaAtivaId] ?? "";
   const duplicadoAtivo = modoDuplicadoPorRota[rotaAtivaId] ?? false;
 
@@ -343,6 +355,34 @@ export function BipagemConsole({
       .sort((a, b) => (a.bipadoEm < b.bipadoEm ? 1 : -1))
       .slice(0, 10);
   }, [pendentesRotaAtiva, ultimos]);
+
+  const codigosVisiveis = useMemo(
+    () =>
+      exibirEncomenda
+        ? [
+            ...new Set(
+              ultimosCombinados
+                .filter((e) => e.status === "confirmado" || e.status === "pendente")
+                .map((e) => e.codigo)
+            ),
+          ].sort()
+        : [],
+    [exibirEncomenda, ultimosCombinados]
+  );
+
+  // Consulta assíncrona: não bloqueia a bipagem nem a troca de rota
+  const { data: encomendasPorCodigo } = useQuery({
+    queryKey: ["encomendas-codigos", transportadoraId, codigosVisiveis.join(",")],
+    queryFn: () => buscarEncomendasPorCodigos(supabase, transportadoraId, codigosVisiveis),
+    enabled: exibirEncomenda && online && codigosVisiveis.length > 0,
+    staleTime: 60_000,
+    placeholderData: (anterior) => anterior,
+  });
+
+  const ultimoBipado = exibirEncomenda
+    ? ultimosCombinados.find((e) => e.status === "confirmado" || e.status === "pendente")
+    : undefined;
+  const encomendaUltimo = ultimoBipado ? encomendasPorCodigo?.[ultimoBipado.codigo] : undefined;
 
   const totalConfirmadoOperacao =
     Object.values(contagens ?? {}).reduce((a, b) => a + b, 0) + (pendentesOperacao?.length ?? 0);
@@ -814,19 +854,100 @@ export function BipagemConsole({
         </span>
       </div>
 
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        onClick={() => setExclusaoAberta(true)}
-      >
-        Excluir bipagem
-      </Button>
+      {exibirEncomenda && ultimoBipado && (
+        <div className="rounded-lg border bg-muted/40 p-3">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Última encomenda bipada
+            </span>
+            <span className="font-mono text-xs">{ultimoBipado.codigo}</span>
+          </div>
+          {encomendaUltimo ? (
+            <dl className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-sm sm:grid-cols-4">
+              <div>
+                <dt className="text-xs text-muted-foreground">Volume</dt>
+                <dd className="font-semibold">{formatarVolume(encomendaUltimo) || "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground">Nr. Entrega</dt>
+                <dd className="font-mono font-semibold">{encomendaUltimo.nr_entrega ?? "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground">Nota Fiscal</dt>
+                <dd className="font-semibold">{encomendaUltimo.nota_fiscal ?? "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground">Prazo</dt>
+                <dd className="font-semibold">{formatarPrazo(encomendaUltimo) || "—"}</dd>
+              </div>
+              <div className="col-span-2">
+                <dt className="text-xs text-muted-foreground">Destinatário</dt>
+                <dd className="font-semibold">{encomendaUltimo.nome_pessoa ?? "—"}</dd>
+              </div>
+              <div className="col-span-2 sm:col-span-1">
+                <dt className="text-xs text-muted-foreground">Endereço</dt>
+                <dd>{encomendaUltimo.endereco ?? "—"}</dd>
+              </div>
+              <div className="col-span-2 sm:col-span-1">
+                <dt className="text-xs text-muted-foreground">Bairro</dt>
+                <dd className="font-semibold">{encomendaUltimo.bairro ?? "—"}</dd>
+              </div>
+            </dl>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              {online
+                ? encomendasPorCodigo
+                  ? "Encomenda não localizada nas importações do Recebimento."
+                  : "Buscando dados da encomenda..."
+                : "Offline — dados da encomenda indisponíveis."}
+            </p>
+          )}
+        </div>
+      )}
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => setExclusaoAberta(true)}
+        >
+          Excluir bipagem
+        </Button>
+        {exibirEncomenda && (
+          <ExportarEntregasPdfButton
+            operacaoId={operacaoId}
+            transportadoraId={transportadoraId}
+            transportadoraNome={transportadoraNome}
+            dataOperacao={dataOperacao}
+            rotaAtiva={rotas.find((r) => r.id === rotaAtivaId) ?? null}
+          />
+        )}
+      </div>
 
       <ul className="divide-y text-sm">
         {ultimosCombinados.map((evento) => (
           <li key={evento.id} className="flex items-center justify-between gap-4 py-1.5">
-            <span className="font-mono">{evento.codigo}</span>
+            <span className="min-w-0">
+              <span className="block font-mono">{evento.codigo}</span>
+              {exibirEncomenda && encomendasPorCodigo?.[evento.codigo] && (
+                <span className="block truncate text-xs text-muted-foreground">
+                  {[
+                    `Vol. ${formatarVolume(encomendasPorCodigo[evento.codigo]) || "—"}`,
+                    encomendasPorCodigo[evento.codigo].nr_entrega,
+                    encomendasPorCodigo[evento.codigo].nota_fiscal &&
+                      `NF ${encomendasPorCodigo[evento.codigo].nota_fiscal}`,
+                    encomendasPorCodigo[evento.codigo].nome_pessoa,
+                    encomendasPorCodigo[evento.codigo].endereco,
+                    encomendasPorCodigo[evento.codigo].bairro,
+                    formatarPrazo(encomendasPorCodigo[evento.codigo]) &&
+                      `Prazo ${formatarPrazo(encomendasPorCodigo[evento.codigo])}`,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </span>
+              )}
+            </span>
             <span className="flex min-w-0 flex-1 items-center justify-end gap-3">
               {evento.motivo && (
                 <span className="truncate text-xs text-muted-foreground">{evento.motivo}</span>

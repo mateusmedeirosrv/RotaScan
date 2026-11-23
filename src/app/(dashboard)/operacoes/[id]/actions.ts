@@ -3,10 +3,21 @@
 import { revalidatePath } from "next/cache";
 import { requireAdmin, requireAuth } from "@/lib/auth/guards";
 import { registrarAuditoria } from "@/lib/auditoria";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { createClient } from "@/lib/supabase/server";
+import type { EncomendaInput } from "@/lib/encomendas/planilha";
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 type ManifestoItemInput = { codigo: string; descricao: string | null };
+
+const LOTE_ENCOMENDAS = 500;
+
+// Desfaz um manifesto parcialmente importado. A policy de DELETE de
+// manifestos é só do admin, então usa o service role (cascata remove
+// manifesto_itens e encomendas).
+async function desfazerManifesto(manifestoId: string) {
+  await createAdminClient().from("manifestos").delete().eq("id", manifestoId);
+}
 
 async function categorizarItens(
   supabase: Supabase,
@@ -87,7 +98,8 @@ export async function prevalidarManifesto(operacaoId: string, itens: ManifestoIt
 export async function importarManifesto(
   operacaoId: string,
   nomeArquivo: string,
-  itens: ManifestoItemInput[]
+  itens: ManifestoItemInput[],
+  encomendas: EncomendaInput[] | null = null
 ) {
   const { supabase, colaborador } = await requireAuth();
 
@@ -118,7 +130,7 @@ export async function importarManifesto(
     .insert({
       operacao_id: operacaoId,
       nome_arquivo: nomeArquivo,
-      total_itens: itens.length,
+      total_itens: encomendas?.length ?? itens.length,
       encontradas,
       faltantes: invalidos.length,
       extras: validos.length,
@@ -144,11 +156,30 @@ export async function importarManifesto(
   );
 
   if (itensError) {
-    await supabase.from("manifestos").delete().eq("id", manifesto.id);
+    await desfazerManifesto(manifesto.id);
     return {
       error:
         "Não foi possível importar os itens do manifesto (verifique se há códigos duplicados na planilha).",
     };
+  }
+
+  if (encomendas?.length) {
+    for (let i = 0; i < encomendas.length; i += LOTE_ENCOMENDAS) {
+      const { error: encomendasError } = await supabase.from("encomendas").insert(
+        encomendas.slice(i, i + LOTE_ENCOMENDAS).map((encomenda) => ({
+          ...encomenda,
+          manifesto_id: manifesto.id,
+          operacao_id: operacaoId,
+          galpao_id: operacao.galpao_id,
+          transportadora_id: operacao.transportadora_id,
+        }))
+      );
+
+      if (encomendasError) {
+        await desfazerManifesto(manifesto.id);
+        return { error: "Não foi possível gravar as encomendas da planilha. Tente novamente." };
+      }
+    }
   }
 
   if (validos.length > 0) {
@@ -166,7 +197,7 @@ export async function importarManifesto(
     );
 
     if (bipagensError) {
-      await supabase.from("manifestos").delete().eq("id", manifesto.id);
+      await desfazerManifesto(manifesto.id);
       return {
         error:
           "Não foi possível confirmar automaticamente os códigos do manifesto. Tente novamente.",

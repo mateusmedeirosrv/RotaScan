@@ -5,6 +5,11 @@ import { read, utils } from "xlsx";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { importarManifesto, prevalidarManifesto } from "./actions";
+import {
+  lerPlanilhaEncomendas,
+  ROTULO_CAMPO,
+  type EncomendaInput,
+} from "@/lib/encomendas/planilha";
 
 const CHAVES_CODIGO = ["codigo", "código", "code", "sku", "cod"];
 const CHAVES_DESCRICAO = ["descricao", "descrição", "description", "desc", "produto", "item"];
@@ -55,6 +60,8 @@ export function ManifestoUpload({ operacaoId }: { operacaoId: string }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [nomeArquivo, setNomeArquivo] = useState<string | null>(null);
   const [itens, setItens] = useState<ItemDetectado[] | null>(null);
+  const [encomendas, setEncomendas] = useState<EncomendaInput[] | null>(null);
+  const [camposAusentes, setCamposAusentes] = useState<string[]>([]);
   const [preview, setPreview] = useState<Preview | null>(null);
   const [validando, setValidando] = useState(false);
   const [enviando, setEnviando] = useState(false);
@@ -62,6 +69,8 @@ export function ManifestoUpload({ operacaoId }: { operacaoId: string }) {
   function limpar() {
     setNomeArquivo(null);
     setItens(null);
+    setEncomendas(null);
+    setCamposAusentes([]);
     setPreview(null);
   }
 
@@ -72,7 +81,26 @@ export function ManifestoUpload({ operacaoId }: { operacaoId: string }) {
     const buffer = await file.arrayBuffer();
     const workbook = read(buffer, { type: "array" });
     const primeiraAba = workbook.Sheets[workbook.SheetNames[0]];
-    const itensDetectados = detectarItens(primeiraAba);
+
+    // Layout v2.0 (Romaneio, Nro. Entrega, Nota Fiscal...): cada linha vira uma
+    // encomenda; o Nro. Entrega é o código conferido no manifesto.
+    const planilhaEncomendas = lerPlanilhaEncomendas(primeiraAba);
+    let itensDetectados: ItemDetectado[];
+    if (planilhaEncomendas) {
+      const porCodigo = new Map<string, ItemDetectado>();
+      for (const e of planilhaEncomendas.encomendas) {
+        if (e.nr_entrega && !porCodigo.has(e.nr_entrega)) {
+          porCodigo.set(e.nr_entrega, { codigo: e.nr_entrega, descricao: e.nome_pessoa });
+        }
+      }
+      itensDetectados = [...porCodigo.values()];
+      setEncomendas(planilhaEncomendas.encomendas);
+      setCamposAusentes(planilhaEncomendas.camposAusentes.map((c) => ROTULO_CAMPO[c]));
+    } else {
+      itensDetectados = detectarItens(primeiraAba);
+      setEncomendas(null);
+      setCamposAusentes([]);
+    }
 
     if (!itensDetectados.length) {
       toast.error("Não foi possível identificar códigos na planilha.");
@@ -98,7 +126,7 @@ export function ManifestoUpload({ operacaoId }: { operacaoId: string }) {
   async function handleConfirmar() {
     if (!itens || !nomeArquivo) return;
     setEnviando(true);
-    const result = await importarManifesto(operacaoId, nomeArquivo, itens);
+    const result = await importarManifesto(operacaoId, nomeArquivo, itens, encomendas);
     setEnviando(false);
 
     if (result.error) {
@@ -106,7 +134,11 @@ export function ManifestoUpload({ operacaoId }: { operacaoId: string }) {
       return;
     }
 
-    toast.success("Manifesto importado.");
+    toast.success(
+      encomendas
+        ? `Manifesto importado com ${encomendas.length} encomenda(s).`
+        : "Manifesto importado."
+    );
     limpar();
   }
 
@@ -134,7 +166,13 @@ export function ManifestoUpload({ operacaoId }: { operacaoId: string }) {
         <div className="space-y-2">
           <p className="text-sm text-muted-foreground">
             {nomeArquivo} — {itens.length} código(s) detectado(s)
+            {encomendas && ` · ${encomendas.length} encomenda(s)/volume(s) com dados completos`}
           </p>
+          {encomendas && camposAusentes.length > 0 && (
+            <p className="text-xs text-muted-foreground">
+              Colunas não encontradas na planilha (ficarão em branco): {camposAusentes.join(", ")}
+            </p>
+          )}
 
           {validando ? (
             <p className="text-sm text-muted-foreground">Validando códigos...</p>

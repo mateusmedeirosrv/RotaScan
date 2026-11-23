@@ -58,6 +58,9 @@ operacoes (transportadora + tipo_evento + data + colaborador)
     └──< bipagens (operacao_id + rota_id + motorista_id)
               UNIQUE(transportadora_id, codigo, tipo_evento)  ← regra cross-operação
 
+operacoes (RECEBIMENTO) ──< manifestos ──< encomendas (linhas da planilha, v2.0)
+bipagens.encomenda_id ──> encomendas   ← só tipo CONFERENCIA (vínculo QR/código ↔ encomenda)
+
 rotas (template estável de bairros, sem motorista/data)
     └──< rota_bairros (rota_id, bairro_id, ordem)
 ```
@@ -70,12 +73,24 @@ rotas (template estável de bairros, sem motorista/data)
 
 Uma Operação agrupa bipagens de **uma transportadora + um tipo de evento**. Ciclo: `EM_ANDAMENTO` → `FINALIZADA` (imutável). Múltiplos colaboradores podem ter operações simultâneas. Múltiplas rotas por operação são permitidas — o colaborador troca de rota a qualquer momento sem interromper o fluxo.
 
+### Tipos de evento
+
+`RECEBIMENTO`, `ENTREGA`, `DEVOLUCAO_ORIGEM`, `RETORNO`, `CONFERENCIA` (v2.0). Rótulos pt-BR duplicados em vários mapas (`TIPO_EVENTO_LABEL` em páginas, filtros, `lib/charts/theme.ts`, SQL de `dashboard_bipagens_export`) — ao criar um tipo novo, atualizar todos.
+
+### Encomendas e Conferência (v2.0)
+
+- Import do Recebimento detecta o layout pela coluna "Nro. Entrega" (`src/lib/encomendas/planilha.ts`); cada linha vira `encomendas`; Nr. Entrega distinto segue o fluxo antigo de manifesto (auto-confirma RECEBIMENTO pelo regex). Layout antigo (coluna `codigo`) continua suportado.
+- Operação `CONFERENCIA` (`conferencia-console.tsx`): pesquisa encomendas (data importação + transportadora + texto em `encomendas.busca`), seleciona uma e bipa N códigos → bipagens `CONFERENCIA` com `encomenda_id`, rota padrão "Recebimento", sem motorista, sem regex.
+- Entrega mostra dados da encomenda via RPC `encomendas_por_codigos` (`src/lib/encomendas/consulta.ts`) e exporta PDF paisagem (`src/lib/pdf/entregas.ts`).
+- `ALTER TYPE ... ADD VALUE` fica em migration própria (027): o valor só pode ser usado após commit.
+- Server Actions aceitam até 10 MB (`next.config.ts`) por causa do import de encomendas.
+
 ### Tela de bipagem (crítica de performance)
 
 - Foco permanente no campo de código; aceita scanner USB (input + Enter)
 - Troca de rota deve ser **< 100ms** — não pode interromper bipagem
 - Feedback: flash de tela + som (`confirmado` / `duplicado` / `erro`)
-- Validação Amazon: `^TBR\d{9}$`; Magazine Luiza: qualquer string não vazia
+- Validação Amazon: `^TBR\d{9}$`; Magazine Luiza: qualquer string não vazia (Conferência não valida regex)
 - Duplicidade: `UNIQUE(transportadora_id, codigo, tipo_evento)` bloqueia globalmente (cross-operação)
 - Override com senha (bcrypt) quando `bipagem_entrega_sem_recebimento = BLOQUEAR`
 
@@ -95,7 +110,7 @@ Uma Operação agrupa bipagens de **uma transportadora + um tipo de evento**. Ci
 ## Regras de negócio críticas
 
 1. **Duplicidade cross-operação:** `UNIQUE(transportadora_id, codigo, tipo_evento)` na tabela `bipagens`. Código bipado em ENTREGA por um colaborador bloqueia o mesmo código em ENTREGA em qualquer outra operação.
-2. **Motorista obrigatório em não-Recebimento:** `CHECK` na tabela valida: `motorista_id IS NULL` só em `RECEBIMENTO`.
+2. **Motorista obrigatório em Entrega/Devolução/Retorno:** `CHECK bipagens_motorista_por_tipo`: `motorista_id IS NULL` em `RECEBIMENTO` e `CONFERENCIA`, obrigatório nos demais. `CONFERENCIA` exige `encomenda_id`.
 3. **Operação finalizada é imutável:** edições exigem Admin + log em `auditoria`.
 4. **Configurações dinâmicas:** regex de transportadoras e `bipagem_entrega_sem_recebimento` são editáveis pelo Admin sem deploy.
 5. **Senha de override:** hash bcrypt; default `8038`; registra em `auditoria` tentativas bem-sucedidas e falhas.

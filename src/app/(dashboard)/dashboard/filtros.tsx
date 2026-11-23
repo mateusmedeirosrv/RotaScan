@@ -20,6 +20,7 @@ const TIPO_EVENTO_OPCOES = [
   { id: "ENTREGA", nome: "Entrega" },
   { id: "DEVOLUCAO_ORIGEM", nome: "Devolução à Origem" },
   { id: "RETORNO", nome: "Retorno" },
+  { id: "CONFERENCIA", nome: "Conferência" },
 ];
 
 type Opcao = { id: string; nome: string };

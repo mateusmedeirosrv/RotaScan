@@ -1,8 +1,8 @@
 # PRD — RotaScan
 
 **Documento de Requisitos de Produto**
-**Versão:** 1.0
-**Data:** 2026-06-22
+**Versão:** 2.0
+**Data:** 2026-06-22 (v1.0) · 2026-11-22 (v2.0 — Encomendas, Conferência e dados da encomenda na Entrega)
 **Autor:** Mateus Medeiros
 **Status:** Aprovado para desenvolvimento (MVP)
 
@@ -76,7 +76,7 @@ A **Operação** é a unidade de trabalho que agrupa bipagens feitas por um cola
 1. Colaborador inicia operação preenchendo:
    - **Transportadora** (Amazon / Magalu / outra)
    - **Data** (default: hoje)
-   - **Tipo de Evento** (`RECEBIMENTO` / `ENTREGA` / `DEVOLUCAO_ORIGEM` / `RETORNO`)
+   - **Tipo de Evento** (`RECEBIMENTO` / `ENTREGA` / `DEVOLUCAO_ORIGEM` / `RETORNO` / `CONFERENCIA`)
 2. Sistema cria operação com status `EM_ANDAMENTO`
 3. Dentro da operação, colaborador seleciona a **rota ativa** (dropdown ou tabs) — todas as bipagens vão para essa rota
 4. Colaborador pode **trocar de rota a qualquer momento** e **voltar para uma rota anterior** dentro da mesma operação — as bipagens vão se acumulando em cada rota
@@ -110,6 +110,16 @@ A **Operação** é a unidade de trabalho que agrupa bipagens feitas por um cola
 - Manifesto fica vinculado à **operação de Recebimento** (não mais à rota)
 - Após finalização da operação, relatório de conferência: **Encontradas** / **Faltantes** / **Extras**
 - O manifesto é opcional para finalizar: sem manifesto, o diálogo de finalização avisa que a conferência não será feita e pede confirmação
+
+**Layout de encomendas (v2.0)** — planilha no formato `Exemplo/Campos para Recebimento.xlsx`. Detectado automaticamente pela coluna "Nro. Entrega"; o layout antigo (coluna `codigo`) continua funcionando como antes.
+
+- Cada linha da planilha (= 1 volume) vira um registro em `encomendas`, com os campos:
+  Data Importação*, Transportadora*, Romaneio, Data Romaneio, Motorista, Placa, Remetente, Nr. Entrega, Nome Pessoa, Telefone, Prazo (texto), Prazo Final, Situação, Dias até Prazo, CEP, Endereço, Ponto de Referência, Bairro, Cidade/UF, Região, Nome Região, Nota Fiscal, Volumes, Vol. Nº, Pedido.
+  (*) preenchidos pelo sistema: data da importação (fuso America/Sao_Paulo) e transportadora da operação.
+- Cabeçalhos reconhecidos de forma tolerante (sem acento/pontuação/maiúsculas). Colunas ausentes ficam em branco e são listadas na pré-visualização (ex.: "Ponto de Referência" não vem na planilha de exemplo).
+- O **Nr. Entrega** (distinto) é o código do manifesto: segue a regra de sempre — códigos já recebidos contam como encontrados; os válidos pelo regex da transportadora são **confirmados automaticamente** como bipagens de `RECEBIMENTO`.
+- Nr. Entrega e Pedido são gravados em maiúsculas (comparados com a leitura do scanner).
+- Se qualquer etapa falhar, o manifesto inteiro é desfeito (encomendas e itens saem em cascata).
 
 #### 3.2.4 Bipagem (tela crítica)
 
@@ -171,6 +181,33 @@ Tela separada onde colaborador bipa códigos de encomendas que voltaram ao galp�
 Para encomendas que voltam à Amazon/Magalu (não vão mais para entrega):
 - Bipagem em rota tipo `DEVOLUCAO_ORIGEM`
 - Encerra ciclo de vida da encomenda (status `DEVOLVIDA_ORIGEM`)
+
+#### 3.2.6 Conferência (v2.0)
+
+Tipo de evento `CONFERENCIA`: liga os QR Codes / códigos de barras físicos do pacote à encomenda importada no Recebimento.
+
+1. Colaborador cria uma operação **Conferência** (transportadora + data).
+2. Campos de busca:
+   - **Data Importação** — filtra pela data em que a planilha foi importada
+   - **Transportadora** — padrão = transportadora da operação
+   - **Pesquisa** — busca em qualquer informação da encomenda (Nr. Entrega, NF, Pedido, destinatário, telefone, endereço, bairro, CEP, romaneio, motorista, placa, remetente...). Vários termos separados por espaço são combinados (E). Até 50 resultados; Enter com resultado único seleciona direto.
+3. Ao selecionar a encomenda (volume), abre o painel com todos os dados e o campo de bipagem: o colaborador bipa **quantos códigos quiser** do pacote (QR Code, código de barras, etiqueta da transportadora).
+4. Cada código vira uma bipagem `CONFERENCIA` com `encomenda_id` → a encomenda. Sem validação de regex (formatos variam por etiqueta).
+5. Regras:
+   - Um código físico fica vinculado a **uma única encomenda** (índice único `transportadora + código + tipo`). Bipar um código já vinculado avisa a qual encomenda ele pertence.
+   - Sem motorista e sem rota de bairro: usa a rota padrão "Recebimento" do galpão.
+   - Vínculos podem ser removidos ("Remover") enquanto a operação está em andamento (mesma regra de exclusão de bipagem).
+   - Bipagem funciona offline (fila Dexie); a pesquisa de encomendas exige conexão.
+6. Botão **"Próxima encomenda"** em destaque (no topo e no fim do painel): fecha a encomenda atual e devolve o foco ao campo Pesquisa.
+7. **Exportar Excel**: exporta todas as encomendas dos filtros atuais (Data Importação + Transportadora + Pesquisa), sem o limite de 50 da tela — sem filtros, todas da transportadora. Colunas: os 25 campos da importação + Conferida (Sim/Não), Qtd. Códigos e Códigos Vinculados.
+
+#### 3.2.7 Dados da encomenda na Entrega (v2.0)
+
+Na operação de **Entrega**, ao bipar um QR Code ou código de barras, além do registro normal da bipagem a tela mostra a **última encomenda bipada** com: **Volume**, **Nr. Entrega**, **Nota Fiscal**, **Destinatário (Nome Pessoa)**, **Endereço**, **Bairro**, **Prazo**. A lista das últimas bipagens também exibe esses dados em uma linha resumida.
+
+- Localização da encomenda (função `encomendas_por_codigos`): 1º código vinculado na Conferência; 2º código igual ao Nr. Entrega ou ao Pedido da planilha (ex.: Amazon TBR).
+- Consulta assíncrona: não atrasa a bipagem nem a troca de rota. Offline, os dados ficam indisponíveis (a bipagem segue normal).
+- **Exportar PDF (A4 paisagem)**: botões "PDF rota X" (rota ativa) e "PDF todas as rotas". Colunas: #, Código, Rota, Motorista, Vol., Nr. Entrega, NF, Destinatário, Endereço, Bairro, Prazo — ordenado por rota e horário, cabeçalho repetido por página e numeração. Também disponível em operações de Entrega finalizadas.
 
 ### 3.3 Módulo de Análise
 
@@ -333,6 +370,10 @@ cidades (1) ──< (N) galpoes (1) ──< (N) colaboradores (1:1) → auth.use
                               │       └─ UNIQUE(transportadora_id, codigo, tipo_evento)
                               │
                               └──< (0..1) manifesto ──< (N) manifesto_itens
+                                              │
+                                              └──< (N) encomendas (v2.0 — linhas da planilha)
+                                                        ▲
+                                bipagens.encomenda_id ──┘ (tipo CONFERENCIA)
 
 transportadoras (regex)
 configuracoes (singleton, key-value)
@@ -393,6 +434,11 @@ CREATE INDEX idx_bipagens_colab_data ON bipagens(colaborador_id, bipado_em);
 ```
 
 **Nota sobre `transportadora_id` em `bipagens`:** o valor é redundante (já está em `operacoes.transportadora_id`) mas é mantido na tabela para suportar o índice `UNIQUE` cross-operação. Trigger garante consistência com a operação pai.
+
+**v2.0 — mudanças em `bipagens`:** `tipo_evento` ganhou `CONFERENCIA`; nova coluna `encomenda_id UUID REFERENCES encomendas(id) ON DELETE CASCADE`. CHECK `bipagens_motorista_por_tipo`: motorista NULL em `RECEBIMENTO` e `CONFERENCIA`, obrigatório nos demais. CHECK `bipagens_conferencia_encomenda`: `CONFERENCIA` exige `encomenda_id`.
+
+#### `encomendas` (v2.0)
+Uma linha por volume da planilha de Recebimento. FKs: `manifesto_id` (CASCADE), `operacao_id`, `galpao_id`, `transportadora_id`. Campos: `data_importacao`, `importado_em`, `romaneio`, `data_romaneio`, `motorista`, `placa`, `remetente`, `nr_entrega`, `nome_pessoa`, `telefone`, `prazo_texto`, `prazo_final`, `situacao`, `dias_ate_prazo`, `cep`, `endereco`, `ponto_referencia`, `bairro`, `cidade_uf`, `regiao`, `nome_regiao`, `nota_fiscal`, `volumes`, `vol_nr`, `pedido` + `busca` (coluna gerada, minúscula, com índice trigrama para a Pesquisa da Conferência). RLS: leitura/inserção por galpão; exclusão só Admin. Migrations: `027_tipo_evento_conferencia.sql` e `028_encomendas_conferencia.sql`.
 
 **Nota sobre `motorista_id` em `bipagens`:** o motorista é vinculado a cada bipagem (não à rota) porque qualquer motorista pode fazer qualquer rota. A UI seleciona o motorista junto com a rota ativa e replica para as bipagens seguintes até o operador trocar.
 
@@ -521,6 +567,7 @@ INSERT INTO transportadoras (nome, regex_validacao) VALUES
 | **9** | Exports (Excel + PDF de QR Codes em A4) | 1-2 dias |
 | **10** | Configurações + override (painel admin, senha hashada, log de auditoria, forçar finalizar operação travada) | 1-2 dias |
 | **11** | Tela de Pesquisa com filtros múltiplos + exclusão de bipagem por código na tela de bipagem | — |
+| **v2.0** | Encomendas na importação do Recebimento (25 campos), tipo de evento Conferência (vínculo QR/código de barras ↔ encomenda), dados da encomenda na Entrega + PDF paisagem | — |
 
 **Total estimado:** ~3–4 semanas para MVP completo em produção.
 

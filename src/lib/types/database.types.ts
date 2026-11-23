@@ -13,7 +13,23 @@ export type TipoEvento =
   | "RECEBIMENTO"
   | "ENTREGA"
   | "DEVOLUCAO_ORIGEM"
-  | "RETORNO";
+  | "RETORNO"
+  | "CONFERENCIA";
+
+// Dados da encomenda exibidos na Entrega e no PDF (função encomendas_por_codigos)
+export interface EncomendaResumo {
+  codigo: string;
+  encomenda_id: string;
+  nr_entrega: string | null;
+  nota_fiscal: string | null;
+  nome_pessoa: string | null;
+  endereco: string | null;
+  bairro: string | null;
+  prazo_final: string | null;
+  prazo_texto: string | null;
+  volumes: number | null;
+  vol_nr: number | null;
+}
 
 export type StatusOperacao = "EM_ANDAMENTO" | "FINALIZADA";
 
@@ -232,16 +248,24 @@ export interface Database {
           ciclo_fechado: boolean;
           motivo: string | null;
           duplicado: boolean;
+          encomenda_id: string | null;
         };
         Insert: Omit<
           Database["public"]["Tables"]["bipagens"]["Row"],
-          "id" | "bipado_em" | "override_aplicado" | "ciclo_fechado" | "motivo" | "duplicado"
+          | "id"
+          | "bipado_em"
+          | "override_aplicado"
+          | "ciclo_fechado"
+          | "motivo"
+          | "duplicado"
+          | "encomenda_id"
         > & {
           bipado_em?: string;
           override_aplicado?: boolean;
           ciclo_fechado?: boolean;
           motivo?: string | null;
           duplicado?: boolean;
+          encomenda_id?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["bipagens"]["Insert"]>;
         Relationships: [];
@@ -279,6 +303,50 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["manifesto_itens"]["Insert"]>;
         Relationships: [];
       };
+      encomendas: {
+        Row: {
+          id: string;
+          manifesto_id: string;
+          operacao_id: string;
+          galpao_id: string;
+          transportadora_id: string;
+          data_importacao: string;
+          importado_em: string;
+          romaneio: string | null;
+          data_romaneio: string | null;
+          motorista: string | null;
+          placa: string | null;
+          remetente: string | null;
+          nr_entrega: string | null;
+          nome_pessoa: string | null;
+          telefone: string | null;
+          prazo_texto: string | null;
+          prazo_final: string | null;
+          situacao: string | null;
+          dias_ate_prazo: number | null;
+          cep: string | null;
+          endereco: string | null;
+          ponto_referencia: string | null;
+          bairro: string | null;
+          cidade_uf: string | null;
+          regiao: string | null;
+          nome_regiao: string | null;
+          nota_fiscal: string | null;
+          volumes: number | null;
+          vol_nr: number | null;
+          pedido: string | null;
+          busca: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["encomendas"]["Row"],
+          "id" | "data_importacao" | "importado_em" | "busca"
+        > & {
+          data_importacao?: string;
+          importado_em?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["encomendas"]["Insert"]>;
+        Relationships: [];
+      };
       configuracoes: {
         Row: {
           chave: string;
@@ -314,6 +382,10 @@ export interface Database {
           p_rota_id: string;
         };
         Returns: boolean;
+      };
+      encomendas_por_codigos: {
+        Args: { p_transportadora_id: string; p_codigos: string[] };
+        Returns: EncomendaResumo[];
       };
       desfazer_bipagem: {
         Args: { p_bipagem_id: string };

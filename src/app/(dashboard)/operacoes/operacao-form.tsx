@@ -36,6 +36,7 @@ const TIPOS_EVENTO: { value: TipoEvento; label: string }[] = [
   { value: "ENTREGA", label: "Entrega" },
   { value: "DEVOLUCAO_ORIGEM", label: "Devolução à Origem" },
   { value: "RETORNO", label: "Retorno" },
+  { value: "CONFERENCIA", label: "Conferência" },
 ];
 
 function hoje() {
@@ -46,7 +47,7 @@ const schema = z.object({
   galpao_id: z.string().min(1, "Selecione o galpão"),
   transportadora_id: z.string().min(1, "Selecione a transportadora"),
   data: z.string().min(1, "Informe a data"),
-  tipo_evento: z.enum(["RECEBIMENTO", "ENTREGA", "DEVOLUCAO_ORIGEM", "RETORNO"]),
+  tipo_evento: z.enum(["RECEBIMENTO", "ENTREGA", "DEVOLUCAO_ORIGEM", "RETORNO", "CONFERENCIA"]),
 });
 
 type FormData = z.infer<typeof schema>;
