@@ -63,12 +63,12 @@ export function PesquisaFiltros({
     <form onSubmit={aplicar} className="space-y-4 rounded-lg border p-4">
       <div className="flex flex-wrap items-end gap-4">
         <div className="min-w-64 flex-1 space-y-1">
-          <Label htmlFor="pesquisa-codigo">Código da encomenda</Label>
+          <Label htmlFor="pesquisa-codigo">Código ou dados da encomenda</Label>
           <Input
             id="pesquisa-codigo"
             value={filtros.codigo}
             onChange={(e) => setFiltro("codigo", e.target.value)}
-            placeholder="Parte do código, ou vários códigos separados por espaço/vírgula"
+            placeholder="Código, Nr. Entrega, NF, destinatário, endereço, bairro, telefone, CEP... ou vários códigos separados por espaço/vírgula"
             autoComplete="off"
           />
         </div>

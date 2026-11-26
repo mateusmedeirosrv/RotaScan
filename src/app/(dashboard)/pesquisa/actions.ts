@@ -4,10 +4,12 @@ import { requireAuth } from "@/lib/auth/guards";
 import {
   TIPO_EVENTO_LABEL,
   carregarCadastros,
+  carregarEncomendas,
   carregarOperacoes,
   consultarBipagens,
   type FiltrosPesquisa,
 } from "./consulta";
+import { formatarPrazo, formatarVolume } from "@/lib/encomendas/consulta";
 
 const LIMITE_EXPORT = 20000;
 const LOTE = 1000;
@@ -32,10 +34,14 @@ export async function exportarPesquisa(filtros: FiltrosPesquisa) {
   const motoristas = nome(cadastros.motoristas);
   const rotas = nome(cadastros.rotas);
   const colaboradores = nome(cadastros.colaboradores);
-  const operacoes = await carregarOperacoes(supabase, bipagens.map((b) => b.operacao_id));
+  const [operacoes, encomendas] = await Promise.all([
+    carregarOperacoes(supabase, bipagens.map((b) => b.operacao_id)),
+    carregarEncomendas(supabase, bipagens),
+  ]);
 
   const linhas = bipagens.map((b) => {
     const operacao = operacoes.get(b.operacao_id);
+    const encomenda = encomendas.get(`${b.transportadora_id}|${b.codigo}`);
     return {
       "Data/Hora": new Date(b.bipado_em).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }),
       Código: b.codigo,
@@ -44,6 +50,13 @@ export async function exportarPesquisa(filtros: FiltrosPesquisa) {
       Rota: rotas.get(b.rota_id) ?? "—",
       Motorista: b.motorista_id ? motoristas.get(b.motorista_id) ?? "—" : "—",
       Colaborador: colaboradores.get(b.colaborador_id) ?? "—",
+      "Nr. Entrega": encomenda?.nr_entrega ?? "",
+      "Nota Fiscal": encomenda?.nota_fiscal ?? "",
+      Destinatário: encomenda?.nome_pessoa ?? "",
+      Endereço: encomenda?.endereco ?? "",
+      Bairro: encomenda?.bairro ?? "",
+      Prazo: formatarPrazo(encomenda),
+      Volume: formatarVolume(encomenda),
       "Data da operação": operacao?.data ?? "—",
       "Status da operação": operacao?.status === "FINALIZADA" ? "Finalizada" : "Em andamento",
       Motivo: b.motivo ?? "",

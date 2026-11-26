@@ -1,5 +1,6 @@
 import type { createClient } from "@/lib/supabase/server";
-import type { TipoEvento } from "@/lib/types/database.types";
+import type { EncomendaResumo, TipoEvento } from "@/lib/types/database.types";
+import { buscarEncomendasPorCodigos } from "@/lib/encomendas/consulta";
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
@@ -55,8 +56,10 @@ export function filtrosParaParams(filtros: FiltrosPesquisa) {
   return params;
 }
 
-// Vários códigos (separados por espaço, vírgula ou linha) = busca exata em lote;
-// um código só = busca parcial (ex.: últimos dígitos).
+// Vários códigos (separados por espaço, vírgula ou linha, todos com dígitos)
+// = busca exata em lote. Qualquer outro texto = busca parcial no código E em
+// todas as colunas da encomenda (destinatário, endereço, bairro, NF, Nro.
+// Entrega, pedido, telefone, CEP...) via RPC pesquisar_bipagens.
 function termosCodigo(codigo: string) {
   return codigo.split(/[\s,;]+/).map((c) => c.trim()).filter(Boolean);
 }
@@ -66,15 +69,19 @@ export function consultarBipagens(
   filtros: FiltrosPesquisa,
   opcoes: { contar?: boolean } = {}
 ) {
-  let query = supabase
-    .from("bipagens")
-    .select("*", opcoes.contar ? { count: "exact" } : undefined)
-    .order("bipado_em", { ascending: false });
+  const texto = filtros.codigo.trim();
+  const termos = termosCodigo(texto);
+  const loteCodigos = termos.length > 1 && termos.every((t) => /\d/.test(t));
+  const contagem = opcoes.contar ? ({ count: "exact" } as const) : undefined;
 
-  const termos = termosCodigo(filtros.codigo);
-  if (termos.length === 1) {
-    query = query.ilike("codigo", `%${termos[0].replace(/[%_\\]/g, "\\$&")}%`);
-  } else if (termos.length > 1) {
+  let query =
+    texto && !loteCodigos
+      ? supabase.rpc("pesquisar_bipagens", { p_termo: texto }, contagem).select("*")
+      : supabase.from("bipagens").select("*", contagem);
+
+  query = query.order("bipado_em", { ascending: false });
+
+  if (loteCodigos) {
     const variantes = new Set(termos.flatMap((t) => [t, t.toUpperCase()]));
     query = query.in("codigo", [...variantes]);
   }
@@ -109,6 +116,35 @@ export async function carregarCadastros(supabase: Supabase) {
     rotas: rotas ?? [],
     colaboradores: colaboradores ?? [],
   };
+}
+
+// Dados da encomenda (planilha do Recebimento) para as bipagens listadas,
+// chaveados por `${transportadora_id}|${codigo}`.
+export async function carregarEncomendas(
+  supabase: Supabase,
+  bipagens: { transportadora_id: string; codigo: string }[]
+) {
+  const porTransportadora = new Map<string, string[]>();
+  for (const b of bipagens) {
+    const lista = porTransportadora.get(b.transportadora_id) ?? [];
+    lista.push(b.codigo);
+    porTransportadora.set(b.transportadora_id, lista);
+  }
+
+  const mapa = new Map<string, EncomendaResumo>();
+  await Promise.all(
+    [...porTransportadora].map(async ([transportadoraId, codigos]) => {
+      try {
+        const encomendas = await buscarEncomendasPorCodigos(supabase, transportadoraId, codigos);
+        for (const [codigo, e] of Object.entries(encomendas)) {
+          mapa.set(`${transportadoraId}|${codigo}`, e);
+        }
+      } catch {
+        // Sem dados da encomenda: a pesquisa continua mostrando a bipagem.
+      }
+    })
+  );
+  return mapa;
 }
 
 export async function carregarOperacoes(supabase: Supabase, ids: string[]) {

@@ -13,6 +13,7 @@ import {
 import {
   TIPO_EVENTO_LABEL,
   carregarCadastros,
+  carregarEncomendas,
   carregarOperacoes,
   consultarBipagens,
   filtrosParaParams,
@@ -20,6 +21,7 @@ import {
 } from "./consulta";
 import { PesquisaFiltros } from "./pesquisa-filtros";
 import { ExportarPesquisaButton } from "./exportar-button";
+import { formatarPrazo, formatarVolume } from "@/lib/encomendas/consulta";
 
 const POR_PAGINA = 100;
 
@@ -39,10 +41,13 @@ export default async function PesquisaPage({
     consultarBipagens(supabase, filtros, { contar: true }).range(inicio, inicio + POR_PAGINA - 1),
   ]);
 
-  const operacoes = await carregarOperacoes(
-    supabase,
-    (bipagens ?? []).map((b) => b.operacao_id)
-  );
+  const [operacoes, encomendas] = await Promise.all([
+    carregarOperacoes(
+      supabase,
+      (bipagens ?? []).map((b) => b.operacao_id)
+    ),
+    carregarEncomendas(supabase, bipagens ?? []),
+  ]);
 
   const nomes = (lista: { id: string; nome: string }[]) => new Map(lista.map((i) => [i.id, i.nome]));
   const transportadoras = nomes(cadastros.transportadoras);
@@ -94,6 +99,13 @@ export default async function PesquisaPage({
               <TableHead>Rota</TableHead>
               <TableHead>Motorista</TableHead>
               <TableHead>Colaborador</TableHead>
+              <TableHead>Nr. Entrega</TableHead>
+              <TableHead>Nota Fiscal</TableHead>
+              <TableHead>Destinatário</TableHead>
+              <TableHead>Endereço</TableHead>
+              <TableHead>Bairro</TableHead>
+              <TableHead>Prazo</TableHead>
+              <TableHead>Vol.</TableHead>
               <TableHead>Motivo</TableHead>
               <TableHead>Operação</TableHead>
             </TableRow>
@@ -102,6 +114,7 @@ export default async function PesquisaPage({
             {bipagens?.length ? (
               bipagens.map((b) => {
                 const operacao = operacoes.get(b.operacao_id);
+                const encomenda = encomendas.get(`${b.transportadora_id}|${b.codigo}`);
                 return (
                   <TableRow key={b.id}>
                     <TableCell className="whitespace-nowrap">
@@ -125,6 +138,17 @@ export default async function PesquisaPage({
                       {b.motorista_id ? motoristas.get(b.motorista_id) ?? "—" : "—"}
                     </TableCell>
                     <TableCell>{colaboradores.get(b.colaborador_id) ?? "—"}</TableCell>
+                    <TableCell className="font-mono">{encomenda?.nr_entrega ?? ""}</TableCell>
+                    <TableCell>{encomenda?.nota_fiscal ?? ""}</TableCell>
+                    <TableCell className="max-w-48 truncate" title={encomenda?.nome_pessoa ?? undefined}>
+                      {encomenda?.nome_pessoa ?? ""}
+                    </TableCell>
+                    <TableCell className="max-w-56 truncate" title={encomenda?.endereco ?? undefined}>
+                      {encomenda?.endereco ?? ""}
+                    </TableCell>
+                    <TableCell>{encomenda?.bairro ?? ""}</TableCell>
+                    <TableCell className="whitespace-nowrap">{formatarPrazo(encomenda)}</TableCell>
+                    <TableCell>{formatarVolume(encomenda)}</TableCell>
                     <TableCell className="max-w-48 truncate text-muted-foreground">
                       {b.motivo ?? ""}
                     </TableCell>
@@ -151,7 +175,7 @@ export default async function PesquisaPage({
               })
             ) : (
               <TableRow>
-                <TableCell colSpan={9} className="text-center text-muted-foreground">
+                <TableCell colSpan={16} className="text-center text-muted-foreground">
                   Nenhuma bipagem encontrada.
                 </TableCell>
               </TableRow>

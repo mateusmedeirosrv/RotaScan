@@ -387,6 +387,10 @@ export interface Database {
         Args: { p_transportadora_id: string; p_codigos: string[] };
         Returns: EncomendaResumo[];
       };
+      pesquisar_bipagens: {
+        Args: { p_termo: string };
+        Returns: Database["public"]["Tables"]["bipagens"]["Row"][];
+      };
       desfazer_bipagem: {
         Args: { p_bipagem_id: string };
         Returns: undefined;
