@@ -360,6 +360,9 @@ export function ConferenciaConsole({
 
   function fecharSelecao() {
     setSelecionada(null);
+    // Próxima encomenda: limpa a busca e deixa o cursor pronto para digitar.
+    setPesquisa("");
+    setPesquisaDebounced("");
     requestAnimationFrame(() => pesquisaRef.current?.focus());
   }
 
