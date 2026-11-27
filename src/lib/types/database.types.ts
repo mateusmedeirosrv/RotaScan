@@ -31,6 +31,27 @@ export interface EncomendaResumo {
   vol_nr: number | null;
 }
 
+// Linha do painel de entregas pendentes da tela inicial (painel_entregas_pendentes)
+export interface PainelPendenciaLinha {
+  dia: string; // YYYY-MM-DD (prazo; vencido/ausente = hoje)
+  atrasada: boolean;
+  transportadora_id: string;
+  transportadora: string;
+  encomenda_id: string;
+  nr_entrega: string | null;
+  nota_fiscal: string | null;
+  volumes: number | null;
+  vol_nr: number | null;
+  nome_pessoa: string | null;
+  endereco: string | null;
+  bairro: string | null;
+  prazo_final: string | null;
+  prazo_texto: string | null;
+  motorista: string | null;
+  rota: string | null;
+  disponibilizado_em: string | null;
+}
+
 export type StatusOperacao = "EM_ANDAMENTO" | "FINALIZADA";
 
 export interface LinhaExport {
@@ -391,6 +412,10 @@ export interface Database {
       encomendas_por_codigos: {
         Args: { p_transportadora_id: string; p_codigos: string[] };
         Returns: EncomendaResumo[];
+      };
+      painel_entregas_pendentes: {
+        Args: { p_hoje?: string };
+        Returns: PainelPendenciaLinha[];
       };
       pesquisar_bipagens: {
         Args: { p_termo: string };
