@@ -67,19 +67,23 @@ function termosCodigo(codigo: string) {
 export function consultarBipagens(
   supabase: Supabase,
   filtros: FiltrosPesquisa,
-  opcoes: { contar?: boolean } = {}
+  opcoes: { contar?: boolean; apenasContagem?: boolean } = {}
 ) {
   const texto = filtros.codigo.trim();
   const termos = termosCodigo(texto);
   const loteCodigos = termos.length > 1 && termos.every((t) => /\d/.test(t));
-  const contagem = opcoes.contar ? ({ count: "exact" } as const) : undefined;
+  const contagem = opcoes.apenasContagem
+    ? ({ count: "exact", head: true } as const)
+    : opcoes.contar
+      ? ({ count: "exact" } as const)
+      : undefined;
 
   let query =
     texto && !loteCodigos
       ? supabase.rpc("pesquisar_bipagens", { p_termo: texto }, contagem).select("*")
       : supabase.from("bipagens").select("*", contagem);
 
-  query = query.order("bipado_em", { ascending: false });
+  if (!opcoes.apenasContagem) query = query.order("bipado_em", { ascending: false });
 
   if (loteCodigos) {
     const variantes = new Set(termos.flatMap((t) => [t, t.toUpperCase()]));
@@ -95,6 +99,21 @@ export function consultarBipagens(
   if (filtros.dataFim) query = query.lte("bipado_em", `${filtros.dataFim}T23:59:59.999${FUSO}`);
 
   return query;
+}
+
+// Entregas, retornos e entregas líquidas (Entrega − Retorno) dentro dos
+// filtros atuais. Retornos do motorista abatem do total entregue.
+export async function resumoEntregaRetorno(supabase: Supabase, filtros: FiltrosPesquisa) {
+  const contar = async (tipo: TipoEvento) => {
+    if (filtros.tipos.length && !filtros.tipos.includes(tipo)) return 0;
+    const { count } = await consultarBipagens(supabase, filtros, { apenasContagem: true }).eq(
+      "tipo_evento",
+      tipo
+    );
+    return count ?? 0;
+  };
+  const [entregas, retornos] = await Promise.all([contar("ENTREGA"), contar("RETORNO")]);
+  return { entregas, retornos, liquido: entregas - retornos };
 }
 
 export async function carregarCadastros(supabase: Supabase) {

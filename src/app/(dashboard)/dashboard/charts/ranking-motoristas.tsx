@@ -12,6 +12,7 @@ export function RankingMotoristasChart({
     total: number;
     unicos: number;
     duplicados: number;
+    retornos: number;
     dias_trabalhados: number;
     media_dia: number;
   }[];
@@ -24,7 +25,7 @@ export function RankingMotoristasChart({
     tooltip: {
       pointFormatter(this: Highcharts.Point) {
         const d = dados[this.index];
-        return `<b>${d.total}</b> bipagens (${d.unicos} único · ${d.duplicados} duplicado)<br/>média de <b>${d.media_dia}</b>/dia (${d.dias_trabalhados} dia(s) trabalhado(s))`;
+        return `<b>${d.total}</b> entregas líquidas (${d.unicos} único · ${d.duplicados} duplicado − ${d.retornos} retorno)<br/>média de <b>${d.media_dia}</b>/dia (${d.dias_trabalhados} dia(s) trabalhado(s))`;
       },
     },
     series: [
@@ -39,6 +40,13 @@ export function RankingMotoristasChart({
         name: "Duplicado",
         color: CHART_SEQUENTIAL_RED[2],
         data: dados.map((d) => d.duplicados),
+      },
+      {
+        // Retornos abatem: barra negativa, à esquerda do zero
+        type: "bar",
+        name: "Retorno",
+        color: CHART_SEQUENTIAL_RED[4],
+        data: dados.map((d) => -(d.retornos ?? 0)),
       },
     ],
   };

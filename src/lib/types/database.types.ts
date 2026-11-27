@@ -63,7 +63,8 @@ export interface DashboardKpis {
   total: number;
   por_dia: { dia: string; total: number }[];
   por_transportadora: { transportadora: string; total: number }[];
-  por_motorista: ({ motorista: string; unicos: number; duplicados: number } & RankingItem)[];
+  // total = entregas − retornos do motorista
+  por_motorista: ({ motorista: string; unicos: number; duplicados: number; retornos: number } & RankingItem)[];
   ranking_colaboradores: ({ colaborador: string } & RankingItem)[];
   por_tipo_evento: { tipo_evento: TipoEvento; total: number }[];
   por_dia_transportadora: { dia: string; transportadora: string; total: number }[];
@@ -85,6 +86,8 @@ export interface DashboardKpis {
   recebimento_total: number;
   entrega_total: number;
   entrega_duplicados_total: number;
+  retorno_total: number;
+  entrega_liquida_total: number; // Entrega − Retorno
   overrides_aplicados: number;
 }
 
@@ -249,6 +252,7 @@ export interface Database {
           motivo: string | null;
           duplicado: boolean;
           encomenda_id: string | null;
+          chave_encomenda: string | null;
         };
         Insert: Omit<
           Database["public"]["Tables"]["bipagens"]["Row"],
@@ -259,6 +263,7 @@ export interface Database {
           | "motivo"
           | "duplicado"
           | "encomenda_id"
+          | "chave_encomenda"
         > & {
           bipado_em?: string;
           override_aplicado?: boolean;

@@ -87,7 +87,7 @@ export function DashboardCharts({
 
         <Card>
           <CardHeader>
-            <CardTitle>Ranking de motoristas (entrega)</CardTitle>
+            <CardTitle>Ranking de motoristas (entregas − retornos)</CardTitle>
           </CardHeader>
           <CardContent>
             <RankingMotoristasChart dados={dados.por_motorista} />

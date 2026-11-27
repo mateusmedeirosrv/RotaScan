@@ -65,7 +65,7 @@ export function FunilChart({
             </span>
           ))}
           <span>
-            Diferença Receb. × Entrega:{" "}
+            Diferença Receb. × Entrega líquida:{" "}
             <b className="text-foreground">
               {diferencaAbs > 0 ? "+" : ""}
               {diferencaAbs}

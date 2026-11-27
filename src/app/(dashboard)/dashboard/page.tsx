@@ -97,10 +97,13 @@ export default async function DashboardPage({
     recebimento_total: 0,
     entrega_total: 0,
     entrega_duplicados_total: 0,
+    retorno_total: 0,
+    entrega_liquida_total: 0,
     overrides_aplicados: 0,
   };
 
-  const diferencaAbs = dados.entrega_total - dados.recebimento_total;
+  // Retornos abatem das entregas: a comparação usa as entregas líquidas.
+  const diferencaAbs = dados.entrega_liquida_total - dados.recebimento_total;
   const diferencaPct =
     dados.recebimento_total > 0 ? (diferencaAbs / dados.recebimento_total) * 100 : null;
 
@@ -139,7 +142,7 @@ export default async function DashboardPage({
         motoristasSelecionados={motoristaIds}
       />
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-6">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4 xl:grid-cols-7">
         <Card>
           <CardHeader>
             <CardTitle className="text-sm text-muted-foreground">Total bipado</CardTitle>
@@ -154,9 +157,23 @@ export default async function DashboardPage({
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm text-muted-foreground">Entrega</CardTitle>
+            <CardTitle className="text-sm text-muted-foreground">Entrega (líquida)</CardTitle>
           </CardHeader>
-          <CardContent className="text-2xl font-semibold">{dados.entrega_total}</CardContent>
+          <CardContent>
+            <div className="text-2xl font-semibold">{dados.entrega_liquida_total}</div>
+            <p className="text-xs text-muted-foreground">
+              {dados.entrega_total} bipadas − {dados.retorno_total} retornos
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm text-muted-foreground">Retornos</CardTitle>
+          </CardHeader>
+          <CardContent className="text-2xl font-semibold text-red-600">
+            {dados.retorno_total > 0 ? "−" : ""}
+            {dados.retorno_total}
+          </CardContent>
         </Card>
         <Card>
           <CardHeader>
@@ -167,7 +184,7 @@ export default async function DashboardPage({
         <Card>
           <CardHeader>
             <CardTitle className="text-sm text-muted-foreground">
-              Diferença Receb. × Entrega
+              Diferença Receb. × Entrega líquida
             </CardTitle>
           </CardHeader>
           <CardContent className="text-2xl font-semibold">

@@ -18,6 +18,7 @@ import {
   consultarBipagens,
   filtrosParaParams,
   lerFiltros,
+  resumoEntregaRetorno,
 } from "./consulta";
 import { PesquisaFiltros } from "./pesquisa-filtros";
 import { ExportarPesquisaButton } from "./exportar-button";
@@ -36,9 +37,10 @@ export default async function PesquisaPage({
   const pagina = Math.max(1, Number(params.pagina) || 1);
   const inicio = (pagina - 1) * POR_PAGINA;
 
-  const [cadastros, { data: bipagens, count, error }] = await Promise.all([
+  const [cadastros, { data: bipagens, count, error }, resumo] = await Promise.all([
     carregarCadastros(supabase),
     consultarBipagens(supabase, filtros, { contar: true }).range(inicio, inicio + POR_PAGINA - 1),
+    resumoEntregaRetorno(supabase, filtros),
   ]);
 
   const [operacoes, encomendas] = await Promise.all([
@@ -83,9 +85,27 @@ export default async function PesquisaPage({
       {error ? (
         <p className="text-sm text-red-600">Não foi possível carregar a pesquisa.</p>
       ) : (
-        <p className="text-sm text-muted-foreground">
-          {total.toLocaleString("pt-BR")} bipagem(ns) encontrada(s)
-        </p>
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm text-muted-foreground">
+          <span>{total.toLocaleString("pt-BR")} bipagem(ns) encontrada(s)</span>
+          {(resumo.entregas > 0 || resumo.retornos > 0) && (
+            <>
+              <span>
+                Entregas: <strong className="text-foreground">{resumo.entregas.toLocaleString("pt-BR")}</strong>
+              </span>
+              <span>
+                Retornos:{" "}
+                <strong className="text-red-600">
+                  {resumo.retornos > 0 ? "−" : ""}
+                  {resumo.retornos.toLocaleString("pt-BR")}
+                </strong>
+              </span>
+              <span>
+                Entregas líquidas:{" "}
+                <strong className="text-foreground">{resumo.liquido.toLocaleString("pt-BR")}</strong>
+              </span>
+            </>
+          )}
+        </div>
       )}
 
       <div className="overflow-x-auto">
