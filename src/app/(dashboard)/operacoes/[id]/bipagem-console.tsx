@@ -515,6 +515,7 @@ export function BipagemConsole({
       dispararFeedback("confirmado");
       if (duplicadoNoMomento) setDuplicadosConfirmados((n) => n + 1);
     } else if (resultado.status === "duplicado") {
+      if (resultado.mensagem) toast.warning(resultado.mensagem);
       adicionarEventoSessao(codigo, "duplicado");
     } else {
       toast.error(resultado.mensagem);

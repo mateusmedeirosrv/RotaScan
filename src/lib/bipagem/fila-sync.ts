@@ -4,6 +4,8 @@ import { dbOffline, type ItemFila } from "./db-offline";
 import {
   buscarBloqueioConfig,
   existeRecebimentoPrevio,
+  MENSAGEM_ENCOMENDA_JA_ENTREGUE,
+  isEncomendaJaEntregue,
   isFalhaDeRede,
   isUniqueViolation,
   tentarOverride,
@@ -54,7 +56,9 @@ export async function sincronizarFila(supabase: Supabase): Promise<void> {
       if (isUniqueViolation(error)) {
         await dbOffline.fila.update(item.id, {
           status: "conflito",
-          erro: "Código duplicado — já bipado anteriormente.",
+          erro: isEncomendaJaEntregue(error)
+            ? MENSAGEM_ENCOMENDA_JA_ENTREGUE
+            : "Código duplicado — já bipado anteriormente.",
         });
         continue;
       }

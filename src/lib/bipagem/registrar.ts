@@ -7,9 +7,18 @@ type BipagemRow = Database["public"]["Tables"]["bipagens"]["Row"];
 
 export type ResultadoBipagem =
   | { status: "confirmado"; bipagem: BipagemRow }
-  | { status: "duplicado" }
+  | { status: "duplicado"; mensagem?: string }
   | { status: "erro"; mensagem: string }
   | { status: "pendente" };
+
+// Bloqueio do índice bipagens_entrega_encomenda_ativa_key (migration 030):
+// outro código da MESMA encomenda (Nr. Entrega + NF + Volume) já foi entregue.
+export const MENSAGEM_ENCOMENDA_JA_ENTREGUE =
+  "Encomenda já bipada na Entrega por outro código (mesmo Nr. Entrega, Nota Fiscal e Volume).";
+
+export function isEncomendaJaEntregue(error: { message?: string; details?: string }) {
+  return `${error.message ?? ""} ${error.details ?? ""}`.includes("bipagens_entrega_encomenda_ativa_key");
+}
 
 export function isUniqueViolation(error: { code?: string; message?: string }) {
   return error.code === "23505" || error.message?.includes("duplicate key") === true;
@@ -67,7 +76,11 @@ export async function registrarBipagem(
       await enfileirar(payload);
       return { status: "pendente" };
     }
-    if (isUniqueViolation(error)) return { status: "duplicado" };
+    if (isUniqueViolation(error)) {
+      return isEncomendaJaEntregue(error)
+        ? { status: "duplicado", mensagem: MENSAGEM_ENCOMENDA_JA_ENTREGUE }
+        : { status: "duplicado" };
+    }
     return { status: "erro", mensagem: error.message };
   }
 
